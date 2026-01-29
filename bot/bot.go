@@ -85,22 +85,15 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 }
 
 func (b *Bot) handleStart(msg *tgbotapi.Message) {
-	text := `Welcome to FundBot\!
-
-*Commands:*
-/address \- Show your wallet address
-/quote <address> <amount> <CHAIN\.ASSET> \- Get a swap quote
-/topup <address> <amount> <CHAIN\.ASSET> \- Execute a swap
-/status <topup\_id> \- Check topup status
-
-*Asset examples:*
-BTC\.BTC, ETH\.ETH, ETH\.LINK\-0x514910771AF9Ca656af840dff83E8264EcF986CA`
-	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
-	reply.ReplyToMessageID = msg.MessageID
-	reply.ParseMode = "MarkdownV2"
-	if _, err := b.api.Send(reply); err != nil {
-		log.Printf("Error sending message: %v", err)
-	}
+	text := "Welcome to FundBot!\n\n" +
+		"*Commands:*\n" +
+		"/address - Show your wallet address\n" +
+		"/quote `<address> <amount> <CHAIN.ASSET>` - Get a swap quote\n" +
+		"/topup `<address> <amount> <CHAIN.ASSET>` - Execute a swap\n" +
+		"/status `<topup_id>` - Check topup status\n\n" +
+		"*Asset examples:*\n" +
+		"`BTC.BTC`, `ETH.ETH`, `ETH.LINK-0x514910771AF9Ca656af840dff83E8264EcF986CA`"
+	b.reply(msg, text)
 }
 
 func (b *Bot) handleAddress(msg *tgbotapi.Message) {
