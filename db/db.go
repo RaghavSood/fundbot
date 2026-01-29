@@ -1,7 +1,9 @@
 package db
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -58,6 +60,7 @@ type QuoteRecord struct {
 
 type TopupRecord struct {
 	ID        int64
+	ShortID   string
 	Type      string
 	QuoteID   int64
 	UserID    int64
@@ -96,6 +99,7 @@ func migrate(conn *sql.DB) error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS topups (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			short_id TEXT UNIQUE NOT NULL,
 			type TEXT NOT NULL DEFAULT 'fast',
 			quote_id INTEGER NOT NULL REFERENCES quotes(id),
 			user_id INTEGER NOT NULL,
@@ -128,24 +132,31 @@ func (d *DB) InsertQuote(q *QuoteRecord) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (d *DB) InsertTopup(t *TopupRecord) (int64, error) {
-	result, err := d.conn.Exec(
-		`INSERT INTO topups (type, quote_id, user_id, provider, from_chain, tx_hash, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		t.Type, t.QuoteID, t.UserID, t.Provider, t.FromChain, t.TxHash, t.Status,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("inserting topup: %w", err)
-	}
-	return result.LastInsertId()
+func generateShortID() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
-func (d *DB) GetTopup(id int64) (*TopupRecord, error) {
+func (d *DB) InsertTopup(t *TopupRecord) (string, error) {
+	shortID := generateShortID()
+	_, err := d.conn.Exec(
+		`INSERT INTO topups (short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		shortID, t.Type, t.QuoteID, t.UserID, t.Provider, t.FromChain, t.TxHash, t.Status,
+	)
+	if err != nil {
+		return "", fmt.Errorf("inserting topup: %w", err)
+	}
+	return shortID, nil
+}
+
+func (d *DB) GetTopup(shortID string) (*TopupRecord, error) {
 	var t TopupRecord
 	err := d.conn.QueryRow(
-		`SELECT id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
-		FROM topups WHERE id = ?`, id,
-	).Scan(&t.ID, &t.Type, &t.QuoteID, &t.UserID, &t.Provider, &t.FromChain, &t.TxHash, &t.Status, &t.CreatedAt)
+		`SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
+		FROM topups WHERE short_id = ?`, shortID,
+	).Scan(&t.ID, &t.ShortID, &t.Type, &t.QuoteID, &t.UserID, &t.Provider, &t.FromChain, &t.TxHash, &t.Status, &t.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("getting topup: %w", err)
 	}

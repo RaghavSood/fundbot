@@ -242,7 +242,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	}
 
 	// Store topup
-	topupID, err := b.db.InsertTopup(&db.TopupRecord{
+	shortID, err := b.db.InsertTopup(&db.TopupRecord{
 		Type:      "fast",
 		QuoteID:   quoteID,
 		UserID:    msg.From.ID,
@@ -256,7 +256,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	}
 
 	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", txHash)
-	text := fmt.Sprintf("*Topup #%d*\nTx: `%s`\nTracker: %s\nUse /status %d to check progress.", topupID, txHash, trackerURL, topupID)
+	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\nTracker: %s\nUse /status %s to check progress.", shortID, txHash, trackerURL, shortID)
 	b.reply(msg, text)
 }
 
@@ -267,21 +267,15 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 		return
 	}
 
-	topupID, err := strconv.ParseInt(args, 10, 64)
-	if err != nil {
-		b.reply(msg, "Invalid topup ID.")
-		return
-	}
-
-	topup, err := b.db.GetTopup(topupID)
+	topup, err := b.db.GetTopup(args)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Topup not found: %v", err))
 		return
 	}
 
 	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", topup.TxHash)
-	text := fmt.Sprintf("*Topup #%d*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\nTracker: %s",
-		topup.ID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, trackerURL)
+	text := fmt.Sprintf("*Topup %s*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\nTracker: %s",
+		topup.ShortID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, trackerURL)
 	b.reply(msg, text)
 }
 
@@ -303,6 +297,7 @@ func (b *Bot) reply(msg *tgbotapi.Message, text string) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
 	reply.ReplyToMessageID = msg.MessageID
 	reply.ParseMode = "Markdown"
+	reply.DisableWebPagePreview = true
 	if _, err := b.api.Send(reply); err != nil {
 		log.Printf("Error sending message: %v", err)
 	}
