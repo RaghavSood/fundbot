@@ -1,0 +1,12 @@
+{
+  "telegram_token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+  "mode": "single",
+  "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  "admin_user_id": 123456789,
+  "whitelisted_users": [123456789],
+  "database_path": "fundbot.db",
+  "rpc_endpoints": {
+    "avalanche": "https://api.avax.network/ext/bc/C/rpc",
+    "base": "https://mainnet.base.org"
+  }
+}

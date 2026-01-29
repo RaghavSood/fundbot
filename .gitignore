@@ -5,14 +5,10 @@ fundbot
 *.dll
 *.so
 *.dylib
-
-# Test binary
 *.test
-
-# Output of the go coverage tool
 *.out
 
-# Dependency directories
+# Dependencies
 vendor/
 
 # IDE
@@ -22,11 +18,14 @@ vendor/
 *.swo
 *~
 
-# Data directory
-data/
-
 # OS files
 .DS_Store
 Thumbs.db
 
+# Nix/devenv
 .devenv
+
+# Project secrets/data
+config.json
+*.db
+data/
