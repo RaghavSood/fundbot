@@ -67,8 +67,8 @@ func (c *Config) validate() error {
 	if c.AdminUserID == 0 {
 		return fmt.Errorf("admin_user_id is required")
 	}
-	if c.Mode == ModeMulti && c.DatabasePath == "" {
-		return fmt.Errorf("database_path is required in multi mode")
+	if c.DatabasePath == "" {
+		return fmt.Errorf("database_path is required")
 	}
 	return nil
 }
