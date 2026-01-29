@@ -18,11 +18,11 @@ import (
 type Bot struct {
 	api     *tgbotapi.BotAPI
 	config  *config.Config
-	db      *db.DB
+	db      *db.Store
 	swapMgr *swaps.Manager
 }
 
-func New(cfg *config.Config, database *db.DB, swapMgr *swaps.Manager) (*Bot, error) {
+func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(cfg.TelegramToken)
 	if err != nil {
 		return nil, fmt.Errorf("creating bot API: %w", err)
@@ -32,7 +32,7 @@ func New(cfg *config.Config, database *db.DB, swapMgr *swaps.Manager) (*Bot, err
 	return &Bot{
 		api:     api,
 		config:  cfg,
-		db:      database,
+		db:      store,
 		swapMgr: swapMgr,
 	}, nil
 }
@@ -141,6 +141,25 @@ func parseSwapArgs(args string) (destination string, usdAmount float64, asset sw
 	return
 }
 
+func (b *Bot) insertQuote(ctx context.Context, quote *swaps.Quote, userID int64, destination string) (int64, error) {
+	return b.db.InsertQuote(ctx, db.InsertQuoteParams{
+		Type:           "fast",
+		Provider:       quote.Provider,
+		UserID:         userID,
+		FromAsset:      quote.FromAsset.String(),
+		FromChain:      quote.FromChain,
+		ToAsset:        quote.ToAsset.String(),
+		Destination:    destination,
+		InputAmountUsd: quote.InputAmountUSD,
+		InputAmount:    quote.InputAmount.String(),
+		ExpectedOutput: quote.ExpectedOutput,
+		Memo:           quote.Memo,
+		Router:         quote.Router,
+		VaultAddress:   quote.VaultAddress,
+		Expiry:         quote.Expiry,
+	})
+}
+
 func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 	destination, usdAmount, asset, err := parseSwapArgs(msg.CommandArguments())
 	if err != nil {
@@ -157,23 +176,7 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Store quote in DB
-	quoteID, err := b.db.InsertQuote(&db.QuoteRecord{
-		Type:           "fast",
-		Provider:       quote.Provider,
-		UserID:         msg.From.ID,
-		FromAsset:      quote.FromAsset.String(),
-		FromChain:      quote.FromChain,
-		ToAsset:        quote.ToAsset.String(),
-		Destination:    destination,
-		InputAmountUSD: quote.InputAmountUSD,
-		InputAmount:    quote.InputAmount.String(),
-		ExpectedOutput: quote.ExpectedOutput,
-		Memo:           quote.Memo,
-		Router:         quote.Router,
-		VaultAddress:   quote.VaultAddress,
-		Expiry:         quote.Expiry,
-	})
+	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, destination)
 	if err != nil {
 		log.Printf("Error storing quote: %v", err)
 	}
@@ -200,23 +203,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Store quote
-	quoteID, err := b.db.InsertQuote(&db.QuoteRecord{
-		Type:           "fast",
-		Provider:       quote.Provider,
-		UserID:         msg.From.ID,
-		FromAsset:      quote.FromAsset.String(),
-		FromChain:      quote.FromChain,
-		ToAsset:        quote.ToAsset.String(),
-		Destination:    destination,
-		InputAmountUSD: quote.InputAmountUSD,
-		InputAmount:    quote.InputAmount.String(),
-		ExpectedOutput: quote.ExpectedOutput,
-		Memo:           quote.Memo,
-		Router:         quote.Router,
-		VaultAddress:   quote.VaultAddress,
-		Expiry:         quote.Expiry,
-	})
+	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, destination)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error storing quote: %v", err))
 		return
@@ -242,7 +229,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	}
 
 	// Store topup
-	shortID, err := b.db.InsertTopup(&db.TopupRecord{
+	topupRow, err := b.db.InsertTopupWithShortID(ctx, db.InsertTopupParams{
 		Type:      "fast",
 		QuoteID:   quoteID,
 		UserID:    msg.From.ID,
@@ -256,7 +243,8 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	}
 
 	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", txHash)
-	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\nTracker: %s\nUse /status %s to check progress.", shortID, txHash, trackerURL, shortID)
+	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\nTracker: %s\nUse /status %s to check progress.",
+		topupRow.ShortID, txHash, trackerURL, topupRow.ShortID)
 	b.reply(msg, text)
 }
 
@@ -267,7 +255,8 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 		return
 	}
 
-	topup, err := b.db.GetTopup(args)
+	ctx := context.Background()
+	topup, err := b.db.GetTopupByShortID(ctx, args)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Topup not found: %v", err))
 		return
@@ -286,7 +275,8 @@ func (b *Bot) walletIndex(telegramID int64, username string) (uint32, error) {
 		return 0, nil
 	}
 
-	user, err := b.db.GetOrCreateUser(telegramID, username)
+	ctx := context.Background()
+	user, err := b.db.GetOrCreateUser(ctx, telegramID, username)
 	if err != nil {
 		return 0, err
 	}

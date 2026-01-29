@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "db/queries"
+    schema: "db/migrations"
+    gen:
+      go:
+        package: "db"
+        out: "db"
+        emit_json_tags: false
+        emit_exact_table_names: false
