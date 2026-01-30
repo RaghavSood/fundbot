@@ -16,6 +16,7 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/swaps"
+	"github.com/RaghavSood/fundbot/version"
 	"github.com/RaghavSood/fundbot/wallet"
 )
 
@@ -101,6 +102,9 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		b.handleStatus(msg)
 	case "balance":
 		b.handleBalance(msg)
+	case "version":
+		b.reply(msg, fmt.Sprintf("`%s`", version.Version))
+		return
 	default:
 		b.reply(msg, "Unknown command. Use /start to get started.")
 	}

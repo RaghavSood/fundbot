@@ -16,12 +16,23 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Compute version string
+        id: version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "version=${TAG}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=beta-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build linux/amd64 binary
         env:
           CGO_ENABLED: 1
           GOOS: linux
           GOARCH: amd64
-        run: go build -o fundbot ./cmd/fundbot
+        run: go build -ldflags "-X github.com/RaghavSood/fundbot/version.Version=${{ steps.version.outputs.version }}" -o fundbot ./cmd/fundbot
 
       - uses: actions/upload-artifact@v4
         with:
