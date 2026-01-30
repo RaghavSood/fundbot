@@ -43,17 +43,18 @@ type Quote struct {
 }
 
 type Topup struct {
-	ID        int64
-	ShortID   string
-	Type      string
-	QuoteID   int64
-	UserID    int64
-	Provider  string
-	FromChain string
-	TxHash    string
-	Status    string
-	CreatedAt time.Time
-	ChatID    int64
+	ID         int64
+	ShortID    string
+	Type       string
+	QuoteID    int64
+	UserID     int64
+	Provider   string
+	FromChain  string
+	TxHash     string
+	Status     string
+	CreatedAt  time.Time
+	ChatID     int64
+	ExternalID string
 }
 
 type User struct {

@@ -326,7 +326,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
-	txHash, err := b.swapMgr.ExecuteSwap(ctx, quote, privateKey)
+	result, err := b.swapMgr.ExecuteSwap(ctx, quote, privateKey)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Swap execution failed: %v", err))
 		return
@@ -334,23 +334,23 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 
 	// Store topup
 	topupRow, err := b.db.InsertTopupWithShortID(ctx, db.InsertTopupParams{
-		Type:      "fast",
-		QuoteID:   quoteID,
-		UserID:    msg.From.ID,
-		Provider:  quote.Provider,
-		FromChain: quote.FromChain,
-		TxHash:    txHash,
-		Status:    "pending",
-		ChatID:    msg.Chat.ID,
+		Type:       "fast",
+		QuoteID:    quoteID,
+		UserID:     msg.From.ID,
+		Provider:   quote.Provider,
+		FromChain:  quote.FromChain,
+		TxHash:     result.TxHash,
+		Status:     "pending",
+		ChatID:     msg.Chat.ID,
+		ExternalID: result.ExternalID,
 	})
 	if err != nil {
 		log.Printf("Error storing topup: %v", err)
 	}
 
-	explorerURL := b.config.ExplorerTxURL(quote.FromChain, txHash)
-	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", txHash)
-	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\n[Explorer](%s) | [Tracker](%s)\nUse /status %s to check progress.",
-		topupRow.ShortID, txHash, explorerURL, trackerURL, topupRow.ShortID)
+	explorerURL := b.config.ExplorerTxURL(quote.FromChain, result.TxHash)
+	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\n[Explorer](%s)\nUse /status %s to check progress.",
+		topupRow.ShortID, result.TxHash, explorerURL, topupRow.ShortID)
 	b.reply(msg, text)
 }
 
@@ -369,9 +369,8 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 	}
 
 	explorerURL := b.config.ExplorerTxURL(topup.FromChain, topup.TxHash)
-	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", topup.TxHash)
-	text := fmt.Sprintf("*Topup %s*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\n[Explorer](%s) | [Tracker](%s)",
-		topup.ShortID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, explorerURL, trackerURL)
+	text := fmt.Sprintf("*Topup %s*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\n[Explorer](%s)",
+		topup.ShortID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, explorerURL)
 	b.reply(msg, text)
 }
 

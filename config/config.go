@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+type ProviderConfig struct {
+	APIKey string `json:"api_key"`
+}
+
 type Mode string
 
 const (
@@ -38,6 +42,9 @@ type Config struct {
 	// Explorer base URLs per chain (e.g. {"base": "https://basescan.org"})
 	// Defaults provided for known chains if not set.
 	Explorers map[string]string `json:"explorers"`
+
+	// Provider-specific configuration (e.g. API keys)
+	Providers map[string]ProviderConfig `json:"providers"`
 
 	// HTTP server port (default 8080)
 	Port int `json:"port"`

@@ -91,20 +91,20 @@ func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount flo
 	return quotes, nil
 }
 
-func (p *Provider) Execute(ctx context.Context, quote swaps.Quote, privateKey *ecdsa.PrivateKey) (string, error) {
+func (p *Provider) Execute(ctx context.Context, quote swaps.Quote, privateKey *ecdsa.PrivateKey) (swaps.ExecuteResult, error) {
 	rpc, ok := p.rpcClients[quote.FromChain]
 	if !ok {
-		return "", fmt.Errorf("no RPC client for chain %s", quote.FromChain)
+		return swaps.ExecuteResult{}, fmt.Errorf("no RPC client for chain %s", quote.FromChain)
 	}
 
 	chainID, ok := chainIDs[quote.FromChain]
 	if !ok {
-		return "", fmt.Errorf("unknown chain ID for %s", quote.FromChain)
+		return swaps.ExecuteResult{}, fmt.Errorf("unknown chain ID for %s", quote.FromChain)
 	}
 
 	usdcAddr, ok := USDCContracts[quote.FromChain]
 	if !ok {
-		return "", fmt.Errorf("no USDC contract for %s", quote.FromChain)
+		return swaps.ExecuteResult{}, fmt.Errorf("no USDC contract for %s", quote.FromChain)
 	}
 
 	routerAddr := common.HexToAddress(quote.Router)
@@ -113,16 +113,16 @@ func (p *Provider) Execute(ctx context.Context, quote swaps.Quote, privateKey *e
 
 	// Step 1: Approve router to spend USDC
 	if err := p.approveERC20(ctx, rpc, chainID, privateKey, fromAddr, usdcAddr, routerAddr, quote.InputAmount); err != nil {
-		return "", fmt.Errorf("approving USDC: %w", err)
+		return swaps.ExecuteResult{}, fmt.Errorf("approving USDC: %w", err)
 	}
 
 	// Step 2: Call depositWithExpiry on router
 	txHash, err := p.depositWithExpiry(ctx, rpc, chainID, privateKey, fromAddr, routerAddr, vaultAddr, usdcAddr, quote.InputAmount, quote.Memo, quote.Expiry)
 	if err != nil {
-		return "", fmt.Errorf("deposit: %w", err)
+		return swaps.ExecuteResult{}, fmt.Errorf("deposit: %w", err)
 	}
 
-	return txHash, nil
+	return swaps.ExecuteResult{TxHash: txHash}, nil
 }
 
 func (p *Provider) approveERC20(ctx context.Context, rpc *ethclient.Client, chainID *big.Int, key *ecdsa.PrivateKey, from, token, spender common.Address, amount *big.Int) error {
@@ -213,7 +213,7 @@ func (p *Provider) depositWithExpiry(ctx context.Context, rpc *ethclient.Client,
 	return signedTx.Hash().Hex(), nil
 }
 
-func (p *Provider) CheckStatus(ctx context.Context, txHash string) (string, error) {
+func (p *Provider) CheckStatus(ctx context.Context, txHash string, externalID string) (string, error) {
 	status, err := p.client.GetTxStatus(ctx, txHash)
 	if err != nil {
 		return "", err

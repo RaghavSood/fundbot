@@ -69,7 +69,7 @@ func (t *Tracker) poll(ctx context.Context) {
 
 		log.Printf("Tracker: checking %s (tx %s)", topup.ShortID, topup.TxHash)
 
-		status, err := t.swapMgr.CheckStatus(ctx, topup.Provider, topup.TxHash)
+		status, err := t.swapMgr.CheckStatus(ctx, topup.Provider, topup.TxHash, topup.ExternalID)
 		if err != nil {
 			log.Printf("Tracker: error checking %s: %v", topup.ShortID, err)
 			continue

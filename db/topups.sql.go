@@ -11,23 +11,24 @@ import (
 )
 
 const getTopupByShortID = `-- name: GetTopupByShortID :one
-SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, created_at
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, external_id, created_at
 FROM topups
 WHERE short_id = ?
 `
 
 type GetTopupByShortIDRow struct {
-	ID        int64
-	ShortID   string
-	Type      string
-	QuoteID   int64
-	UserID    int64
-	Provider  string
-	FromChain string
-	TxHash    string
-	Status    string
-	ChatID    int64
-	CreatedAt time.Time
+	ID         int64
+	ShortID    string
+	Type       string
+	QuoteID    int64
+	UserID     int64
+	Provider   string
+	FromChain  string
+	TxHash     string
+	Status     string
+	ChatID     int64
+	ExternalID string
+	CreatedAt  time.Time
 }
 
 func (q *Queries) GetTopupByShortID(ctx context.Context, shortID string) (GetTopupByShortIDRow, error) {
@@ -44,27 +45,29 @@ func (q *Queries) GetTopupByShortID(ctx context.Context, shortID string) (GetTop
 		&i.TxHash,
 		&i.Status,
 		&i.ChatID,
+		&i.ExternalID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const insertTopup = `-- name: InsertTopup :one
-INSERT INTO topups (short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO topups (short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, external_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, short_id
 `
 
 type InsertTopupParams struct {
-	ShortID   string
-	Type      string
-	QuoteID   int64
-	UserID    int64
-	Provider  string
-	FromChain string
-	TxHash    string
-	Status    string
-	ChatID    int64
+	ShortID    string
+	Type       string
+	QuoteID    int64
+	UserID     int64
+	Provider   string
+	FromChain  string
+	TxHash     string
+	Status     string
+	ChatID     int64
+	ExternalID string
 }
 
 type InsertTopupRow struct {
@@ -83,6 +86,7 @@ func (q *Queries) InsertTopup(ctx context.Context, arg InsertTopupParams) (Inser
 		arg.TxHash,
 		arg.Status,
 		arg.ChatID,
+		arg.ExternalID,
 	)
 	var i InsertTopupRow
 	err := row.Scan(&i.ID, &i.ShortID)
@@ -90,22 +94,23 @@ func (q *Queries) InsertTopup(ctx context.Context, arg InsertTopupParams) (Inser
 }
 
 const listPendingTopups = `-- name: ListPendingTopups :many
-SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, created_at
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, external_id, created_at
 FROM topups WHERE status = 'pending' ORDER BY created_at
 `
 
 type ListPendingTopupsRow struct {
-	ID        int64
-	ShortID   string
-	Type      string
-	QuoteID   int64
-	UserID    int64
-	Provider  string
-	FromChain string
-	TxHash    string
-	Status    string
-	ChatID    int64
-	CreatedAt time.Time
+	ID         int64
+	ShortID    string
+	Type       string
+	QuoteID    int64
+	UserID     int64
+	Provider   string
+	FromChain  string
+	TxHash     string
+	Status     string
+	ChatID     int64
+	ExternalID string
+	CreatedAt  time.Time
 }
 
 func (q *Queries) ListPendingTopups(ctx context.Context) ([]ListPendingTopupsRow, error) {
@@ -128,6 +133,7 @@ func (q *Queries) ListPendingTopups(ctx context.Context) ([]ListPendingTopupsRow
 			&i.TxHash,
 			&i.Status,
 			&i.ChatID,
+			&i.ExternalID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

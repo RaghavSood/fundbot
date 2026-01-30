@@ -14,6 +14,7 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/server"
+	"github.com/RaghavSood/fundbot/simpleswap"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/tracker"
@@ -47,10 +48,18 @@ func main() {
 	}
 
 	// Initialize providers
+	var providers []swaps.Provider
 	tcProvider := thorchain.NewProvider(rpcClients)
+	providers = append(providers, tcProvider)
+
+	if ssCfg, ok := cfg.Providers["simpleswap"]; ok && ssCfg.APIKey != "" {
+		ssProvider := simpleswap.NewProvider(ssCfg.APIKey, rpcClients)
+		providers = append(providers, ssProvider)
+		log.Println("SimpleSwap provider enabled")
+	}
 
 	// Initialize swap manager
-	swapMgr := swaps.NewManager(tcProvider)
+	swapMgr := swaps.NewManager(providers...)
 
 	// Create and run bot
 	b, err := bot.New(cfg, database, swapMgr, rpcClients)

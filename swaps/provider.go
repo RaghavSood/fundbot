@@ -23,6 +23,12 @@ type Quote struct {
 	ExtraData        map[string]interface{}
 }
 
+// ExecuteResult holds the result of executing a swap.
+type ExecuteResult struct {
+	TxHash     string
+	ExternalID string // provider-specific ID (e.g. SimpleSwap exchange ID)
+}
+
 // Provider is the interface that swap providers must implement.
 type Provider interface {
 	// Name returns the provider identifier (e.g. "thorchain").
@@ -33,10 +39,10 @@ type Provider interface {
 	Quote(ctx context.Context, toAsset Asset, usdAmount float64, destination string) ([]Quote, error)
 
 	// Execute submits the swap transaction for the given quote using the provided private key.
-	// Returns the transaction hash.
-	Execute(ctx context.Context, quote Quote, privateKey *ecdsa.PrivateKey) (string, error)
+	Execute(ctx context.Context, quote Quote, privateKey *ecdsa.PrivateKey) (ExecuteResult, error)
 
 	// CheckStatus checks the status of a swap by its source chain tx hash.
+	// externalID is a provider-specific identifier (ignored by some providers).
 	// Returns "pending", "completed", or "failed".
-	CheckStatus(ctx context.Context, txHash string) (string, error)
+	CheckStatus(ctx context.Context, txHash string, externalID string) (string, error)
 }

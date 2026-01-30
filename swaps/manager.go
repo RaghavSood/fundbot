@@ -44,20 +44,20 @@ func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float6
 }
 
 // ExecuteSwap executes the given quote.
-func (m *Manager) ExecuteSwap(ctx context.Context, quote *Quote, privateKey *ecdsa.PrivateKey) (string, error) {
+func (m *Manager) ExecuteSwap(ctx context.Context, quote *Quote, privateKey *ecdsa.PrivateKey) (ExecuteResult, error) {
 	for _, p := range m.providers {
 		if p.Name() == quote.Provider {
 			return p.Execute(ctx, *quote, privateKey)
 		}
 	}
-	return "", fmt.Errorf("provider %q not found", quote.Provider)
+	return ExecuteResult{}, fmt.Errorf("provider %q not found", quote.Provider)
 }
 
 // CheckStatus checks the status of a swap via the named provider.
-func (m *Manager) CheckStatus(ctx context.Context, provider, txHash string) (string, error) {
+func (m *Manager) CheckStatus(ctx context.Context, provider, txHash, externalID string) (string, error) {
 	for _, p := range m.providers {
 		if p.Name() == provider {
-			return p.CheckStatus(ctx, txHash)
+			return p.CheckStatus(ctx, txHash, externalID)
 		}
 	}
 	return "", fmt.Errorf("provider %q not found", provider)
