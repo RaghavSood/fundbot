@@ -54,21 +54,16 @@ func (s *Server) Start() error {
 	staticSub, _ := fs.Sub(staticFiles, "static")
 	fileServer := http.FileServer(http.FS(staticSub))
 
-	// Public landing page and static files
+	// Home page and static files
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
-		http.ServeFileFS(w, r, staticSub, "landing.html")
-	})
-
-	// Dashboard (auth-protected)
-	mux.HandleFunc("/dashboard", s.withDashAuth(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticSub, "index.html")
-	}))
-	mux.HandleFunc("/api/dashboard", s.withDashAuth(s.handleDashboardAPI))
-	mux.HandleFunc("/api/charts", s.withDashAuth(s.handleChartsAPI))
+	})
+	mux.HandleFunc("/api/dashboard", s.handleDashboardAPI)
+	mux.HandleFunc("/api/charts", s.handleChartsAPI)
 
 	// Dashboard login
 	mux.HandleFunc("/login", s.handleDashLogin)
