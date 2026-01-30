@@ -264,11 +264,12 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 		chats, err := s.store.ListChats(ctx)
 		if err == nil {
 			for _, c := range chats {
-				addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID))
+				idx := uint32(c.ID) + 1_000_000
+				addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, idx)
 				result = append(result, userWithAddr{
 					User:    db.User{ID: c.ID, Username: fmt.Sprintf("(group: %s)", c.Title)},
 					Address: addr.Hex(),
-					Index:   uint32(c.ID),
+					Index:   idx,
 				})
 			}
 		}
@@ -323,7 +324,7 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 		chats, err := s.store.ListChats(ctx)
 		if err == nil {
 			for _, c := range chats {
-				addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID))
+				addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID)+1_000_000)
 				if err != nil {
 					continue
 				}

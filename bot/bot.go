@@ -391,11 +391,12 @@ func (b *Bot) walletIndex(msg *tgbotapi.Message) (uint32, error) {
 		return uint32(user.ID), nil
 	}
 
+	// Offset by 1,000,000 to avoid colliding with user-derived indices.
 	chat, err := b.db.GetOrCreateChat(ctx, msg.Chat.ID, msg.Chat.Title)
 	if err != nil {
 		return 0, err
 	}
-	return uint32(chat.ID), nil
+	return uint32(chat.ID) + 1_000_000, nil
 }
 
 func (b *Bot) reply(msg *tgbotapi.Message, text string) {
