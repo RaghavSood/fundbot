@@ -53,6 +53,12 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
 
+          echo "Server: $SSH_SERVER"
+          echo "User: $SSH_USER"
+          echo "Path: $SSH_PATH"
+          echo "Keyhash: "
+          sha256sum ~/.ssh/id_ed25519
+
           chmod +x fundbot
           scp -i ~/.ssh/id_ed25519 fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
           ssh -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_SERVER}" "
