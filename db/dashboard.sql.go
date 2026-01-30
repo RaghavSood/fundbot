@@ -206,3 +206,143 @@ func (q *Queries) TotalVolumeUSD(ctx context.Context) (interface{}, error) {
 	err := row.Scan(&coalesce)
 	return coalesce, err
 }
+
+const volumeByDay = `-- name: VolumeByDay :many
+SELECT DATE(t.created_at) as day, COALESCE(SUM(q.input_amount_usd), 0) as total_usd, COUNT(*) as tx_count
+FROM topups t JOIN quotes q ON t.quote_id = q.id
+GROUP BY DATE(t.created_at) ORDER BY day
+`
+
+type VolumeByDayRow struct {
+	Day      interface{}
+	TotalUsd interface{}
+	TxCount  int64
+}
+
+func (q *Queries) VolumeByDay(ctx context.Context) ([]VolumeByDayRow, error) {
+	rows, err := q.db.QueryContext(ctx, volumeByDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VolumeByDayRow
+	for rows.Next() {
+		var i VolumeByDayRow
+		if err := rows.Scan(&i.Day, &i.TotalUsd, &i.TxCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const volumeByFromChain = `-- name: VolumeByFromChain :many
+SELECT t.from_chain, COALESCE(SUM(q.input_amount_usd), 0) as total_usd, COUNT(*) as tx_count
+FROM topups t JOIN quotes q ON t.quote_id = q.id
+GROUP BY t.from_chain ORDER BY total_usd DESC
+`
+
+type VolumeByFromChainRow struct {
+	FromChain string
+	TotalUsd  interface{}
+	TxCount   int64
+}
+
+func (q *Queries) VolumeByFromChain(ctx context.Context) ([]VolumeByFromChainRow, error) {
+	rows, err := q.db.QueryContext(ctx, volumeByFromChain)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VolumeByFromChainRow
+	for rows.Next() {
+		var i VolumeByFromChainRow
+		if err := rows.Scan(&i.FromChain, &i.TotalUsd, &i.TxCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const volumeByProvider = `-- name: VolumeByProvider :many
+SELECT t.provider, COALESCE(SUM(q.input_amount_usd), 0) as total_usd, COUNT(*) as tx_count
+FROM topups t JOIN quotes q ON t.quote_id = q.id
+GROUP BY t.provider ORDER BY total_usd DESC
+`
+
+type VolumeByProviderRow struct {
+	Provider string
+	TotalUsd interface{}
+	TxCount  int64
+}
+
+func (q *Queries) VolumeByProvider(ctx context.Context) ([]VolumeByProviderRow, error) {
+	rows, err := q.db.QueryContext(ctx, volumeByProvider)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VolumeByProviderRow
+	for rows.Next() {
+		var i VolumeByProviderRow
+		if err := rows.Scan(&i.Provider, &i.TotalUsd, &i.TxCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const volumeByToAsset = `-- name: VolumeByToAsset :many
+SELECT q.to_asset, COALESCE(SUM(q.input_amount_usd), 0) as total_usd, COUNT(*) as tx_count
+FROM topups t JOIN quotes q ON t.quote_id = q.id
+GROUP BY q.to_asset ORDER BY total_usd DESC
+`
+
+type VolumeByToAssetRow struct {
+	ToAsset  string
+	TotalUsd interface{}
+	TxCount  int64
+}
+
+func (q *Queries) VolumeByToAsset(ctx context.Context) ([]VolumeByToAssetRow, error) {
+	rows, err := q.db.QueryContext(ctx, volumeByToAsset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VolumeByToAssetRow
+	for rows.Next() {
+		var i VolumeByToAssetRow
+		if err := rows.Scan(&i.ToAsset, &i.TotalUsd, &i.TxCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

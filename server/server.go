@@ -63,6 +63,7 @@ func (s *Server) Start() error {
 		http.ServeFileFS(w, r, staticSub, "index.html")
 	}))
 	mux.HandleFunc("/api/dashboard", s.withDashAuth(s.handleDashboardAPI))
+	mux.HandleFunc("/api/charts", s.withDashAuth(s.handleChartsAPI))
 
 	// Dashboard login
 	mux.HandleFunc("/login", s.handleDashLogin)
@@ -331,6 +332,21 @@ func (s *Server) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		"index":       fmt.Sprintf("%d", req.Index),
 		"address":     addr.Hex(),
 		"private_key": privHex,
+	})
+}
+
+func (s *Server) handleChartsAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	byAsset, _ := s.store.VolumeByToAsset(ctx)
+	byChain, _ := s.store.VolumeByFromChain(ctx)
+	byDay, _ := s.store.VolumeByDay(ctx)
+	byProvider, _ := s.store.VolumeByProvider(ctx)
+
+	writeJSON(w, map[string]interface{}{
+		"volume_by_asset":    byAsset,
+		"volume_by_chain":    byChain,
+		"volume_by_day":      byDay,
+		"volume_by_provider": byProvider,
 	})
 }
 

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FundBot Dashboard</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <nav>
@@ -21,6 +22,13 @@
       <div class="card"><div class="label">Providers</div><div class="value" id="providers">-</div></div>
       <div class="card"><div class="label">Users</div><div class="value" id="users">-</div></div>
     </div>
+
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Volume by Destination Asset</h3><canvas id="chart-asset"></canvas></div>
+      <div class="chart-card"><h3>Volume by Source Chain</h3><canvas id="chart-chain"></canvas></div>
+      <div class="chart-card"><h3>Daily Volume (USD)</h3><canvas id="chart-daily"></canvas></div>
+      <div class="chart-card"><h3>Volume by Provider</h3><canvas id="chart-provider"></canvas></div>
+    </div>
   </div>
   <script>
     fetch('/api/dashboard')
@@ -34,6 +42,39 @@
       })
       .catch(() => {
         document.getElementById('cards').innerHTML = '<p class="loading">Failed to load dashboard data.</p>';
+      });
+
+    const COLORS = ['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#39d2c0','#db61a2','#79c0ff'];
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.borderColor = '#21262d';
+
+    function doughnut(id, labels, data) {
+      new Chart(document.getElementById(id), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: COLORS.slice(0, data.length), borderWidth: 0 }] },
+        options: { plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } } } }
+      });
+    }
+
+    fetch('/api/charts')
+      .then(r => r.json())
+      .then(d => {
+        if (d.volume_by_asset && d.volume_by_asset.length)
+          doughnut('chart-asset', d.volume_by_asset.map(r => r.ToAsset), d.volume_by_asset.map(r => Number(r.TotalUsd)));
+        if (d.volume_by_chain && d.volume_by_chain.length)
+          doughnut('chart-chain', d.volume_by_chain.map(r => r.FromChain), d.volume_by_chain.map(r => Number(r.TotalUsd)));
+        if (d.volume_by_provider && d.volume_by_provider.length)
+          doughnut('chart-provider', d.volume_by_provider.map(r => r.Provider), d.volume_by_provider.map(r => Number(r.TotalUsd)));
+        if (d.volume_by_day && d.volume_by_day.length) {
+          new Chart(document.getElementById('chart-daily'), {
+            type: 'bar',
+            data: {
+              labels: d.volume_by_day.map(r => r.Day),
+              datasets: [{ label: 'USD', data: d.volume_by_day.map(r => Number(r.TotalUsd)), backgroundColor: '#58a6ff', borderRadius: 4 }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#21262d' } }, x: { grid: { display: false } } } }
+          });
+        }
       });
   </script>
 </body>

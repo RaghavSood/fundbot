@@ -25,9 +25,9 @@
     <!-- Transactions -->
     <div class="tab-content active" id="tab-transactions">
       <h2>Recent Transactions</h2>
-      <table id="topups-table">
+      <table id="topups-table" class="dense">
         <thead>
-          <tr><th>Short ID</th><th>Provider</th><th>From</th><th>To</th><th>Destination</th><th>USD</th><th>Expected</th><th>Chain</th><th>Tx Hash</th><th>Status</th><th>Time</th></tr>
+          <tr><th>ID</th><th>Provider</th><th>From</th><th>To</th><th>Destination</th><th>USD</th><th>Expected</th><th>Chain</th><th>Tx Hash</th><th>Status</th><th>Time</th></tr>
         </thead>
         <tbody id="topups-body"><tr><td colspan="11" class="loading">Loading...</td></tr></tbody>
       </table>
@@ -40,7 +40,7 @@
     <!-- Users -->
     <div class="tab-content" id="tab-users">
       <h2>Users</h2>
-      <table>
+      <table class="dense">
         <thead><tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Index</th><th>Address</th><th>Joined</th></tr></thead>
         <tbody id="users-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
       </table>
@@ -50,7 +50,7 @@
     <div class="tab-content" id="tab-balances">
       <h2>Address Balances</h2>
       <button id="refresh-balances" class="btn" style="margin-bottom:1rem">Refresh Balances</button>
-      <table>
+      <table class="dense">
         <thead><tr><th>Address</th><th>Chain</th><th>Native Balance</th><th>USDC Balance</th></tr></thead>
         <tbody id="balances-body"><tr><td colspan="4" class="loading">Click refresh to load balances.</td></tr></tbody>
       </table>
@@ -75,6 +75,10 @@
   </div>
 
   <script>
+    function copyBtn(text) {
+      return `<button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button>`;
+    }
+
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -102,12 +106,12 @@
             <td>${r.Provider}</td>
             <td>${r.FromAsset || ''}</td>
             <td>${r.ToAsset || ''}</td>
-            <td><code title="${r.Destination || ''}">${(r.Destination || '').slice(0,12)}...</code></td>
+            <td class="copyable"><code>${r.Destination || ''}</code>${r.Destination ? copyBtn(r.Destination) : ''}</td>
             <td>$${Number(r.InputAmountUsd || 0).toFixed(2)}</td>
             <td>${r.ExpectedOutput || ''}</td>
             <td>${r.FromChain}</td>
-            <td><code title="${r.TxHash}">${r.TxHash.slice(0,10)}...</code></td>
-            <td>${r.Status}</td>
+            <td class="copyable"><code>${r.TxHash}</code>${copyBtn(r.TxHash)}</td>
+            <td><span class="status-${r.Status}">${r.Status}</span></td>
             <td>${new Date(r.CreatedAt).toLocaleString()}</td>
           </tr>`).join('');
           document.getElementById('prev-btn').disabled = page === 0;
@@ -132,7 +136,7 @@
           <td>${u.TelegramID}</td>
           <td>${u.Username || '-'}</td>
           <td>${u.index}</td>
-          <td><code>${u.address}</code></td>
+          <td class="copyable"><code>${u.address}</code>${copyBtn(u.address)}</td>
           <td>${new Date(u.CreatedAt).toLocaleString()}</td>
         </tr>`).join('');
       });
@@ -152,7 +156,7 @@
             const native = formatWei(b.native_balance, b.chain);
             const usdc = formatUSDC(b.usdc_balance);
             return `<tr>
-              <td><code>${b.address}</code></td>
+              <td class="copyable"><code>${b.address}</code>${copyBtn(b.address)}</td>
               <td>${b.chain}</td>
               <td>${native}</td>
               <td>${usdc} USDC</td>
