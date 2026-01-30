@@ -100,8 +100,10 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		b.handleTopup(msg)
 	case "status":
 		b.handleStatus(msg)
-	case "balance":
+	case "balance", "balances":
 		b.handleBalance(msg)
+	case "help":
+		b.handleStart(msg)
 	case "version":
 		b.reply(msg, fmt.Sprintf("`%s`", version.Version))
 		return
