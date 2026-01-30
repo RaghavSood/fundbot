@@ -75,8 +75,21 @@
   </div>
 
   <script>
-    function copyBtn(text) {
-      return `<button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button>`;
+    function truncAddr(addr) {
+      if (!addr || addr.length <= 14) return addr || '';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+    function truncTx(hash) {
+      if (!hash || hash.length <= 16) return hash || '';
+      return hash.slice(0, 8) + '...' + hash.slice(-6);
+    }
+    function addrCell(text) {
+      if (!text) return '';
+      return `<span class="addr-wrap" title="${text}"><code>${truncAddr(text)}</code><button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button></span>`;
+    }
+    function txCell(text) {
+      if (!text) return '';
+      return `<span class="addr-wrap" title="${text}"><code>${truncTx(text)}</code><button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button></span>`;
     }
 
     // Tab switching
@@ -106,11 +119,11 @@
             <td>${r.Provider}</td>
             <td>${r.FromAsset || ''}</td>
             <td>${r.ToAsset || ''}</td>
-            <td class="copyable"><code>${r.Destination || ''}</code>${r.Destination ? copyBtn(r.Destination) : ''}</td>
+            <td>${addrCell(r.Destination)}</td>
             <td>$${Number(r.InputAmountUsd || 0).toFixed(2)}</td>
             <td>${r.ExpectedOutput || ''}</td>
             <td>${r.FromChain}</td>
-            <td class="copyable"><code>${r.TxHash}</code>${copyBtn(r.TxHash)}</td>
+            <td>${txCell(r.TxHash)}</td>
             <td><span class="status-${r.Status}">${r.Status}</span></td>
             <td>${new Date(r.CreatedAt).toLocaleString()}</td>
           </tr>`).join('');
@@ -136,7 +149,7 @@
           <td>${u.TelegramID}</td>
           <td>${u.Username || '-'}</td>
           <td>${u.index}</td>
-          <td class="copyable"><code>${u.address}</code>${copyBtn(u.address)}</td>
+          <td>${addrCell(u.address)}</td>
           <td>${new Date(u.CreatedAt).toLocaleString()}</td>
         </tr>`).join('');
       });
@@ -156,7 +169,7 @@
             const native = formatWei(b.native_balance, b.chain);
             const usdc = formatUSDC(b.usdc_balance);
             return `<tr>
-              <td class="copyable"><code>${b.address}</code>${copyBtn(b.address)}</td>
+              <td>${addrCell(b.address)}</td>
               <td>${b.chain}</td>
               <td>${native}</td>
               <td>${usdc} USDC</td>
