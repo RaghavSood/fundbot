@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FundBot Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <span class="brand">FundBot</span>
+    <a href="/">Dashboard</a>
+    <a href="/admin">Admin</a>
+  </nav>
+  <div class="container">
+    <h1>Dashboard</h1>
+    <div class="cards" id="cards">
+      <div class="card"><div class="label">Total Swaps</div><div class="value" id="topups">-</div></div>
+      <div class="card"><div class="label">Volume (USD)</div><div class="value" id="volume">-</div></div>
+      <div class="card"><div class="label">Unique Pairs</div><div class="value" id="pairs">-</div></div>
+      <div class="card"><div class="label">Providers</div><div class="value" id="providers">-</div></div>
+      <div class="card"><div class="label">Users</div><div class="value" id="users">-</div></div>
+    </div>
+  </div>
+  <script>
+    fetch('/api/dashboard')
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('topups').textContent = d.topups;
+        document.getElementById('volume').textContent = '$' + Number(d.volume).toFixed(2);
+        document.getElementById('pairs').textContent = d.pairs;
+        document.getElementById('providers').textContent = d.providers;
+        document.getElementById('users').textContent = d.users;
+      })
+      .catch(() => {
+        document.getElementById('cards').innerHTML = '<p class="loading">Failed to load dashboard data.</p>';
+      });
+  </script>
+</body>
+</html>

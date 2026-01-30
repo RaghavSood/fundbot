@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FundBot Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <span class="brand">FundBot</span>
+    <a href="/">Dashboard</a>
+    <a href="/admin">Admin</a>
+  </nav>
+  <div class="container">
+    <h1>Admin Panel</h1>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="transactions">Transactions</div>
+      <div class="tab" data-tab="users">Users</div>
+      <div class="tab" data-tab="balances">Balances</div>
+      <div class="tab" data-tab="export">Export Key</div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="tab-content active" id="tab-transactions">
+      <h2>Recent Transactions</h2>
+      <table id="topups-table">
+        <thead>
+          <tr><th>Short ID</th><th>Provider</th><th>From</th><th>To</th><th>Destination</th><th>USD</th><th>Expected</th><th>Chain</th><th>Tx Hash</th><th>Status</th><th>Time</th></tr>
+        </thead>
+        <tbody id="topups-body"><tr><td colspan="11" class="loading">Loading...</td></tr></tbody>
+      </table>
+      <div class="pagination">
+        <button id="prev-btn" disabled>← Prev</button>
+        <button id="next-btn">Next →</button>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="tab-content" id="tab-users">
+      <h2>Users</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Index</th><th>Address</th><th>Joined</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Balances -->
+    <div class="tab-content" id="tab-balances">
+      <h2>Address Balances</h2>
+      <button id="refresh-balances" class="btn" style="margin-bottom:1rem">Refresh Balances</button>
+      <table>
+        <thead><tr><th>Address</th><th>Chain</th><th>Native Balance</th><th>USDC Balance</th></tr></thead>
+        <tbody id="balances-body"><tr><td colspan="4" class="loading">Click refresh to load balances.</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Export Key -->
+    <div class="tab-content" id="tab-export">
+      <h2>Export Private Key</h2>
+      <p style="color:#d29922;margin-bottom:1rem">⚠ This exports the raw private key for fund recovery. Handle with extreme care.</p>
+      <div class="form-group">
+        <label for="key-index">Derivation Index</label>
+        <input type="number" id="key-index" min="0" value="0">
+      </div>
+      <button id="export-btn" class="btn-danger">Export Key</button>
+      <div id="key-result" class="key-result" style="display:none">
+        <div class="warn">Keep this private key safe. Do not share it.</div>
+        <p><strong>Index:</strong> <span id="res-index"></span></p>
+        <p><strong>Address:</strong> <code id="res-address"></code></p>
+        <p><strong>Private Key:</strong> <code id="res-key"></code></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Transactions
+    let page = 0;
+    const pageSize = 50;
+    function loadTopups() {
+      fetch(`/api/admin/topups?limit=${pageSize}&offset=${page * pageSize}`)
+        .then(r => r.json())
+        .then(rows => {
+          const body = document.getElementById('topups-body');
+          if (!rows || rows.length === 0) {
+            body.innerHTML = '<tr><td colspan="11">No transactions found.</td></tr>';
+            return;
+          }
+          body.innerHTML = rows.map(r => `<tr>
+            <td><code>${r.ShortID}</code></td>
+            <td>${r.Provider}</td>
+            <td>${r.FromAsset || ''}</td>
+            <td>${r.ToAsset || ''}</td>
+            <td><code title="${r.Destination || ''}">${(r.Destination || '').slice(0,12)}...</code></td>
+            <td>$${Number(r.InputAmountUsd || 0).toFixed(2)}</td>
+            <td>${r.ExpectedOutput || ''}</td>
+            <td>${r.FromChain}</td>
+            <td><code title="${r.TxHash}">${r.TxHash.slice(0,10)}...</code></td>
+            <td>${r.Status}</td>
+            <td>${new Date(r.CreatedAt).toLocaleString()}</td>
+          </tr>`).join('');
+          document.getElementById('prev-btn').disabled = page === 0;
+          document.getElementById('next-btn').disabled = rows.length < pageSize;
+        });
+    }
+    document.getElementById('prev-btn').addEventListener('click', () => { page--; loadTopups(); });
+    document.getElementById('next-btn').addEventListener('click', () => { page++; loadTopups(); });
+    loadTopups();
+
+    // Users
+    fetch('/api/admin/users')
+      .then(r => r.json())
+      .then(users => {
+        const body = document.getElementById('users-body');
+        if (!users || users.length === 0) {
+          body.innerHTML = '<tr><td colspan="6">No users found.</td></tr>';
+          return;
+        }
+        body.innerHTML = users.map(u => `<tr>
+          <td>${u.ID}</td>
+          <td>${u.TelegramID}</td>
+          <td>${u.Username || '-'}</td>
+          <td>${u.index}</td>
+          <td><code>${u.address}</code></td>
+          <td>${new Date(u.CreatedAt).toLocaleString()}</td>
+        </tr>`).join('');
+      });
+
+    // Balances
+    document.getElementById('refresh-balances').addEventListener('click', () => {
+      const body = document.getElementById('balances-body');
+      body.innerHTML = '<tr><td colspan="4" class="loading">Loading balances...</td></tr>';
+      fetch('/api/admin/balances')
+        .then(r => r.json())
+        .then(bals => {
+          if (!bals || bals.length === 0) {
+            body.innerHTML = '<tr><td colspan="4">No balances found.</td></tr>';
+            return;
+          }
+          body.innerHTML = bals.map(b => {
+            const native = formatWei(b.native_balance, b.chain);
+            const usdc = formatUSDC(b.usdc_balance);
+            return `<tr>
+              <td><code>${b.address}</code></td>
+              <td>${b.chain}</td>
+              <td>${native}</td>
+              <td>${usdc} USDC</td>
+            </tr>`;
+          }).join('');
+        });
+    });
+
+    function formatWei(wei, chain) {
+      const val = BigInt(wei);
+      const whole = val / BigInt(1e18);
+      const frac = val % BigInt(1e18);
+      const fracStr = frac.toString().padStart(18, '0').slice(0, 6);
+      const symbol = chain === 'avalanche' ? 'AVAX' : chain === 'base' ? 'ETH' : chain.toUpperCase();
+      return `${whole}.${fracStr} ${symbol}`;
+    }
+
+    function formatUSDC(raw) {
+      const val = BigInt(raw);
+      const whole = val / BigInt(1e6);
+      const frac = (val % BigInt(1e6)).toString().padStart(6, '0').slice(0, 2);
+      return `${whole}.${frac}`;
+    }
+
+    // Export Key
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const idx = parseInt(document.getElementById('key-index').value, 10);
+      if (isNaN(idx) || idx < 0) return alert('Invalid index');
+      if (!confirm(`Are you sure you want to export the private key for index ${idx}? This is a sensitive operation.`)) return;
+
+      fetch('/api/admin/export-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index: idx })
+      })
+        .then(r => r.json())
+        .then(d => {
+          document.getElementById('key-result').style.display = 'block';
+          document.getElementById('res-index').textContent = d.index;
+          document.getElementById('res-address').textContent = d.address;
+          document.getElementById('res-key').textContent = d.private_key;
+        })
+        .catch(e => alert('Error: ' + e));
+    });
+  </script>
+</body>
+</html>
