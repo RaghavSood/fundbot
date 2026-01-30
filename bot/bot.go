@@ -246,9 +246,10 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		log.Printf("Error storing topup: %v", err)
 	}
 
+	explorerURL := b.config.ExplorerTxURL(quote.FromChain, txHash)
 	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", txHash)
-	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\nTracker: %s\nUse /status %s to check progress.",
-		topupRow.ShortID, txHash, trackerURL, topupRow.ShortID)
+	text := fmt.Sprintf("*Topup %s*\nTx: `%s`\n[Explorer](%s) | [Tracker](%s)\nUse /status %s to check progress.",
+		topupRow.ShortID, txHash, explorerURL, trackerURL, topupRow.ShortID)
 	b.reply(msg, text)
 }
 
@@ -266,9 +267,10 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 		return
 	}
 
+	explorerURL := b.config.ExplorerTxURL(topup.FromChain, topup.TxHash)
 	trackerURL := fmt.Sprintf("https://thorchain.net/tx/%s", topup.TxHash)
-	text := fmt.Sprintf("*Topup %s*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\nTracker: %s",
-		topup.ShortID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, trackerURL)
+	text := fmt.Sprintf("*Topup %s*\nProvider: %s\nChain: %s\nTx: `%s`\nStatus: %s\n[Explorer](%s) | [Tracker](%s)",
+		topup.ShortID, topup.Provider, topup.FromChain, topup.TxHash, topup.Status, explorerURL, trackerURL)
 	b.reply(msg, text)
 }
 

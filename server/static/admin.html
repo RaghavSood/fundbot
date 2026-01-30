@@ -83,13 +83,21 @@
       if (!hash || hash.length <= 16) return hash || '';
       return hash.slice(0, 8) + '...' + hash.slice(-6);
     }
+    let explorers = {};
+    fetch('/api/explorers').then(r => r.json()).then(d => { explorers = d || {}; });
+    function explorerTxURL(chain, hash) {
+      const base = explorers[chain];
+      return base ? `${base}/tx/${hash}` : null;
+    }
     function addrCell(text) {
       if (!text) return '';
       return `<span class="addr-wrap" title="${text}"><code>${truncAddr(text)}</code><button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button></span>`;
     }
-    function txCell(text) {
+    function txCell(text, chain) {
       if (!text) return '';
-      return `<span class="addr-wrap" title="${text}"><code>${truncTx(text)}</code><button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button></span>`;
+      const url = explorerTxURL(chain, text);
+      const display = url ? `<a href="${url}" target="_blank">${truncTx(text)}</a>` : truncTx(text);
+      return `<span class="addr-wrap" title="${text}"><code>${display}</code><button class="copy-btn" onclick="navigator.clipboard.writeText('${text}')" title="Copy">&#x2398;</button></span>`;
     }
 
     // Tab switching
@@ -123,7 +131,7 @@
             <td>$${Number(r.InputAmountUsd || 0).toFixed(2)}</td>
             <td>${r.ExpectedOutput || ''}</td>
             <td>${r.FromChain}</td>
-            <td>${txCell(r.TxHash)}</td>
+            <td>${txCell(r.TxHash, r.FromChain)}</td>
             <td><span class="status-${r.Status}">${r.Status}</span></td>
             <td>${new Date(r.CreatedAt).toLocaleString()}</td>
           </tr>`).join('');

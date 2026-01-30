@@ -35,6 +35,10 @@ type Config struct {
 	// RPC endpoints for supported chains
 	RPCEndpoints map[string]string `json:"rpc_endpoints"`
 
+	// Explorer base URLs per chain (e.g. {"base": "https://basescan.org"})
+	// Defaults provided for known chains if not set.
+	Explorers map[string]string `json:"explorers"`
+
 	// HTTP server port (default 8080)
 	Port int `json:"port"`
 
@@ -86,6 +90,41 @@ func (c *Config) validate() error {
 		c.Port = 8080
 	}
 	return nil
+}
+
+var defaultExplorers = map[string]string{
+	"base":      "https://basescan.org",
+	"avalanche": "https://snowscan.xyz",
+	"ethereum":  "https://etherscan.io",
+	"arbitrum":  "https://arbiscan.io",
+	"polygon":   "https://polygonscan.com",
+	"optimism":  "https://optimistic.etherscan.io",
+	"bsc":       "https://bscscan.com",
+}
+
+// ExplorerTxURL returns the full explorer URL for a transaction hash on the given chain.
+func (c *Config) ExplorerTxURL(chain, txHash string) string {
+	base := ""
+	if c.Explorers != nil {
+		base = c.Explorers[chain]
+	}
+	if base == "" {
+		base = defaultExplorers[chain]
+	}
+	if base == "" {
+		return txHash
+	}
+	return fmt.Sprintf("%s/tx/%s", base, txHash)
+}
+
+// ExplorerBaseURL returns the explorer base URL for a chain.
+func (c *Config) ExplorerBaseURL(chain string) string {
+	if c.Explorers != nil {
+		if u := c.Explorers[chain]; u != "" {
+			return u
+		}
+	}
+	return defaultExplorers[chain]
 }
 
 func (c *Config) IsAuthorized(userID int64) bool {

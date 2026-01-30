@@ -8,18 +8,21 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/swaps"
 )
 
 type Tracker struct {
+	cfg     *config.Config
 	store   *db.Store
 	swapMgr *swaps.Manager
 	botAPI  *tgbotapi.BotAPI
 }
 
-func New(store *db.Store, swapMgr *swaps.Manager, botAPI *tgbotapi.BotAPI) *Tracker {
+func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, botAPI *tgbotapi.BotAPI) *Tracker {
 	return &Tracker{
+		cfg:     cfg,
 		store:   store,
 		swapMgr: swapMgr,
 		botAPI:  botAPI,
@@ -27,7 +30,7 @@ func New(store *db.Store, swapMgr *swaps.Manager, botAPI *tgbotapi.BotAPI) *Trac
 }
 
 func (t *Tracker) Run(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	// Run once immediately on start
@@ -51,12 +54,28 @@ func (t *Tracker) poll(ctx context.Context) {
 		return
 	}
 
+	if len(pending) == 0 {
+		return
+	}
+
+	log.Printf("Tracker: checking %d pending topup(s)", len(pending))
+
 	for _, topup := range pending {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		log.Printf("Tracker: checking %s (tx %s)", topup.ShortID, topup.TxHash)
+
 		status, err := t.swapMgr.CheckStatus(ctx, topup.Provider, topup.TxHash)
 		if err != nil {
 			log.Printf("Tracker: error checking %s: %v", topup.ShortID, err)
 			continue
 		}
+
+		log.Printf("Tracker: %s status = %s", topup.ShortID, status)
 
 		if status == "completed" {
 			if err := t.store.UpdateTopupStatus(ctx, db.UpdateTopupStatusParams{
@@ -74,8 +93,9 @@ func (t *Tracker) poll(ctx context.Context) {
 }
 
 func (t *Tracker) notifyUser(topup db.Topup) {
-	text := fmt.Sprintf("*Topup %s Complete*\nYour swap has been completed successfully.\nTx: `%s`",
-		topup.ShortID, topup.TxHash)
+	explorerURL := t.cfg.ExplorerTxURL(topup.FromChain, topup.TxHash)
+	text := fmt.Sprintf("*Topup %s Complete*\nYour swap has been completed successfully.\nTx: `%s`\n[View on Explorer](%s)",
+		topup.ShortID, topup.TxHash, explorerURL)
 
 	msg := tgbotapi.NewMessage(topup.UserID, text)
 	msg.ParseMode = "Markdown"

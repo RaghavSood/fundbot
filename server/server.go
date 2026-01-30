@@ -78,6 +78,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/user/", s.withAdminAuth(s.handleAdminUserDetail))
 	mux.HandleFunc("/api/admin/balances", s.withAdminAuth(s.handleAdminBalances))
 	mux.HandleFunc("/api/admin/export-key", s.withAdminAuth(s.handleExportKey))
+	mux.HandleFunc("/api/explorers", s.withDashAuth(s.handleExplorers))
 
 	addr := fmt.Sprintf(":%d", s.cfg.Port)
 	log.Printf("HTTP server listening on %s", addr)
@@ -333,6 +334,17 @@ func (s *Server) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		"address":     addr.Hex(),
 		"private_key": privHex,
 	})
+}
+
+func (s *Server) handleExplorers(w http.ResponseWriter, r *http.Request) {
+	// Return explorer base URLs for all known chains
+	explorers := make(map[string]string)
+	for _, chain := range []string{"base", "avalanche", "ethereum", "arbitrum", "polygon", "optimism", "bsc"} {
+		if u := s.cfg.ExplorerBaseURL(chain); u != "" {
+			explorers[chain] = u
+		}
+	}
+	writeJSON(w, explorers)
 }
 
 func (s *Server) handleChartsAPI(w http.ResponseWriter, r *http.Request) {

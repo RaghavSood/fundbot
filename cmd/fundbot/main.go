@@ -68,7 +68,7 @@ func main() {
 
 	// Start swap completion tracker
 	ctx, cancel := context.WithCancel(context.Background())
-	trk := tracker.New(database, swapMgr, b.BotAPI())
+	trk := tracker.New(cfg, database, swapMgr, b.BotAPI())
 	go trk.Run(ctx)
 
 	go func() {
