@@ -34,6 +34,15 @@ type Config struct {
 
 	// RPC endpoints for supported chains
 	RPCEndpoints map[string]string `json:"rpc_endpoints"`
+
+	// HTTP server port (default 8080)
+	Port int `json:"port"`
+
+	// Optional password to protect the dashboard; empty = public
+	DashboardPassword string `json:"dashboard_password"`
+
+	// Required password to protect the admin panel
+	AdminPassword string `json:"admin_password"`
 }
 
 func Load(path string) (*Config, error) {
@@ -69,6 +78,12 @@ func (c *Config) validate() error {
 	}
 	if c.DatabasePath == "" {
 		return fmt.Errorf("database_path is required")
+	}
+	if c.AdminPassword == "" {
+		return fmt.Errorf("admin_password is required")
+	}
+	if c.Port == 0 {
+		c.Port = 8080
 	}
 	return nil
 }

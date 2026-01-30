@@ -8,5 +8,8 @@
   "rpc_endpoints": {
     "avalanche": "https://api.avax.network/ext/bc/C/rpc",
     "base": "https://mainnet.base.org"
-  }
+  },
+  "port": 8080,
+  "dashboard_password": "",
+  "admin_password": "changeme"
 }
