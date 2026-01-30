@@ -49,13 +49,13 @@ jobs:
           SSH_PATH: ${{ secrets.SSH_PATH }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
 
           chmod +x fundbot
-          scp -i ~/.ssh/deploy_key fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_SERVER}" "
+          scp -i ~/.ssh/id_ed25519 fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_SERVER}" "
             mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot
             systemctl restart givewei
           "
@@ -78,13 +78,13 @@ jobs:
           SSH_PATH: ${{ secrets.SSH_PATH }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
 
           chmod +x fundbot
-          scp -i ~/.ssh/deploy_key fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_SERVER}" "
+          scp -i ~/.ssh/id_ed25519 fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_SERVER}" "
             mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot
             systemctl restart givewei
           "
