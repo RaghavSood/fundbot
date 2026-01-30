@@ -71,6 +71,45 @@ func (q *Queries) InsertTopup(ctx context.Context, arg InsertTopupParams) (Inser
 	return i, err
 }
 
+const listPendingTopups = `-- name: ListPendingTopups :many
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
+FROM topups WHERE status = 'pending' ORDER BY created_at
+`
+
+func (q *Queries) ListPendingTopups(ctx context.Context) ([]Topup, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingTopups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Topup
+	for rows.Next() {
+		var i Topup
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortID,
+			&i.Type,
+			&i.QuoteID,
+			&i.UserID,
+			&i.Provider,
+			&i.FromChain,
+			&i.TxHash,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTopupStatus = `-- name: UpdateTopupStatus :exec
 UPDATE topups SET status = ? WHERE id = ?
 `

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/RaghavSood/fundbot/server"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
+	"github.com/RaghavSood/fundbot/tracker"
 )
 
 func main() {
@@ -64,11 +66,17 @@ func main() {
 		}
 	}()
 
+	// Start swap completion tracker
+	ctx, cancel := context.WithCancel(context.Background())
+	trk := tracker.New(database, swapMgr, b.BotAPI())
+	go trk.Run(ctx)
+
 	go func() {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		<-sig
 		log.Println("Shutting down...")
+		cancel()
 		b.Stop()
 		os.Exit(0)
 	}()

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -48,6 +49,20 @@ type InboundAddress struct {
 	GasRate      string `json:"gas_rate"`
 	GasRateUnits string `json:"gas_rate_units"`
 	DustThreshold string `json:"dust_threshold"`
+}
+
+type TxStage struct {
+	Completed bool `json:"completed"`
+}
+
+type TxStatusResponse struct {
+	Stages struct {
+		InboundObserved            TxStage `json:"inbound_observed"`
+		InboundConfirmationCounted TxStage `json:"inbound_confirmation_counted"`
+		InboundFinalised           TxStage `json:"inbound_finalised"`
+		SwapFinalised              TxStage `json:"swap_finalised"`
+		OutboundSigned             TxStage `json:"outbound_signed"`
+	} `json:"stages"`
 }
 
 type Client struct {
@@ -147,4 +162,39 @@ func (c *Client) GetInboundAddresses(ctx context.Context) ([]InboundAddress, err
 	}
 
 	return addrs, nil
+}
+
+func (c *Client) GetTxStatus(ctx context.Context, txHash string) (*TxStatusResponse, error) {
+	c.rateLimit()
+
+	// Strip 0x prefix if present
+	hash := strings.TrimPrefix(txHash, "0x")
+
+	reqURL := fmt.Sprintf("%s/thorchain/tx/status/%s", c.baseURL, hash)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("requesting tx status: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("tx status API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var status TxStatusResponse
+	if err := json.Unmarshal(body, &status); err != nil {
+		return nil, fmt.Errorf("parsing tx status: %w", err)
+	}
+
+	return &status, nil
 }

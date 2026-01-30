@@ -37,6 +37,10 @@ func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager) (*Bot, err
 	}, nil
 }
 
+func (b *Bot) BotAPI() *tgbotapi.BotAPI {
+	return b.api
+}
+
 func (b *Bot) Run() error {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

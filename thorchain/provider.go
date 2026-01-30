@@ -213,6 +213,19 @@ func (p *Provider) depositWithExpiry(ctx context.Context, rpc *ethclient.Client,
 	return signedTx.Hash().Hex(), nil
 }
 
+func (p *Provider) CheckStatus(ctx context.Context, txHash string) (string, error) {
+	status, err := p.client.GetTxStatus(ctx, txHash)
+	if err != nil {
+		return "", err
+	}
+
+	if status.Stages.OutboundSigned.Completed {
+		return "completed", nil
+	}
+
+	return "pending", nil
+}
+
 func mustParseAsset(s string) swaps.Asset {
 	a, err := swaps.ParseAsset(s)
 	if err != nil {

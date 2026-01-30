@@ -35,4 +35,8 @@ type Provider interface {
 	// Execute submits the swap transaction for the given quote using the provided private key.
 	// Returns the transaction hash.
 	Execute(ctx context.Context, quote Quote, privateKey *ecdsa.PrivateKey) (string, error)
+
+	// CheckStatus checks the status of a swap by its source chain tx hash.
+	// Returns "pending", "completed", or "failed".
+	CheckStatus(ctx context.Context, txHash string) (string, error)
 }

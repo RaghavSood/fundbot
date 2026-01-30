@@ -52,3 +52,13 @@ func (m *Manager) ExecuteSwap(ctx context.Context, quote *Quote, privateKey *ecd
 	}
 	return "", fmt.Errorf("provider %q not found", quote.Provider)
 }
+
+// CheckStatus checks the status of a swap via the named provider.
+func (m *Manager) CheckStatus(ctx context.Context, provider, txHash string) (string, error) {
+	for _, p := range m.providers {
+		if p.Name() == provider {
+			return p.CheckStatus(ctx, txHash)
+		}
+	}
+	return "", fmt.Errorf("provider %q not found", provider)
+}

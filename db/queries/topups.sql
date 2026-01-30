@@ -10,3 +10,7 @@ WHERE short_id = ?;
 
 -- name: UpdateTopupStatus :exec
 UPDATE topups SET status = ? WHERE id = ?;
+
+-- name: ListPendingTopups :many
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
+FROM topups WHERE status = 'pending' ORDER BY created_at;
