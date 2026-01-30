@@ -11,126 +11,59 @@
   <nav>
     <a href="/" class="brand">GiveWei</a>
     <div class="nav-links">
+      <a href="#stats">Stats</a>
       <a href="#features">Features</a>
       <a href="#how-it-works">How It Works</a>
-      <a href="#stats">Stats</a>
       <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener">GitHub</a>
     </div>
   </nav>
 
   <!-- Hero -->
   <section class="hero">
-    <div class="hero-badge">Powered by Thorchain</div>
-    <h1>Top up any wallet<br><span class="hero-accent">in seconds</span></h1>
-    <p class="hero-sub">Send gas or tokens to any address on Avalanche, Base, and more — directly from Telegram. No sign-ups. No browser extensions. Just one command.</p>
-    <div class="hero-cta">
-      <a href="https://t.me/give_wei_bot" class="btn btn-lg btn-primary" target="_blank" rel="noopener">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.79 8.47c-.13.6-.48.74-.98.46l-2.71-2-1.31 1.26c-.14.14-.27.27-.55.27l.19-2.77 5.03-4.54c.22-.19-.05-.3-.34-.12l-6.21 3.91-2.68-.84c-.58-.18-.59-.58.12-.86l10.47-4.04c.49-.17.91.12.76.8z"/></svg>
-        Open in Telegram
-      </a>
-      <a href="https://github.com/RaghavSood/fundbot" class="btn btn-lg btn-outline" target="_blank" rel="noopener">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.43 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.73-4.03-1.41-4.03-1.41-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.14 3 .4c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.19.69.8.58C20.57 21.8 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
-        Self-Host
-      </a>
-    </div>
-    <div class="hero-terminal">
-      <div class="terminal-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="terminal-title">Telegram</span></div>
-      <div class="terminal-body">
-        <div class="terminal-line"><span class="t-user">You</span> <span class="t-cmd">/topup</span> <span class="t-arg">0x1a2B...9cD4 5 ETH.ETH</span></div>
-        <div class="terminal-line"><span class="t-bot">GiveWei</span> Executing swap: $5.00 → ETH.ETH to 0x1a2B...9cD4...</div>
-        <div class="terminal-line"><span class="t-bot">GiveWei</span> <span class="t-success">Topup a3f1 Complete</span> — <a href="#" class="t-link">View on Explorer</a></div>
+    <div class="hero-inner">
+      <h1>Fund any wallet,<br><span class="hero-accent">straight from Telegram</span></h1>
+      <p class="hero-sub">Send gas or tokens to any address on any chain — no sign-ups, no extensions, just one command. Deposit USDC, pick a destination, and GiveWei handles the rest.</p>
+      <div class="hero-cta">
+        <a href="https://t.me/give_wei_bot" class="btn btn-lg btn-primary" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.79 8.47c-.13.6-.48.74-.98.46l-2.71-2-1.31 1.26c-.14.14-.27.27-.55.27l.19-2.77 5.03-4.54c.22-.19-.05-.3-.34-.12l-6.21 3.91-2.68-.84c-.58-.18-.59-.58.12-.86l10.47-4.04c.49-.17.91.12.76.8z"/></svg>
+          Open in Telegram
+        </a>
+        <a href="https://github.com/RaghavSood/fundbot" class="btn btn-lg btn-outline" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.43 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.73-4.03-1.41-4.03-1.41-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.14 3 .4c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.19.69.8.58C20.57 21.8 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Self-Host
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
-  <section class="section" id="features">
-    <div class="container">
-      <div class="section-header">
-        <h2>Why GiveWei</h2>
-        <p class="section-sub">Everything you need to keep your wallets funded, nothing you don't.</p>
-      </div>
-      <div class="features">
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-          <h3>Instant Top-ups</h3>
-          <p>Fund any address in one command. GiveWei routes through Thorchain for the best rates, executing swaps from USDC to any supported asset in under a minute.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <h3>Telegram Native</h3>
-          <p>No accounts, no passwords, no browser extensions. Open the bot in Telegram and start funding. Works in DMs for personal use or group chats for shared team wallets.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-          <h3>Self-Host It</h3>
-          <p>Run your own instance with your own keys. Single-user mode for personal use, multi-user for teams. Fully open source — your keys, your rules, your infrastructure.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <h3>Team Wallets</h3>
-          <p>Add the bot to a Telegram group and everyone shares a single wallet. Perfect for dev teams that need to quickly fund test addresses without passing keys around.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-          <h3>Live Tracking</h3>
-          <p>Every swap is tracked in real-time. Get notified in Telegram the moment your top-up completes. Check status anytime with a simple command.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <h3>Multi-Chain</h3>
-          <p>Swap to any Thorchain-supported asset across Avalanche, Base, Ethereum, Bitcoin, and more. One bot, every chain you need.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- How It Works -->
-  <section class="section section-alt" id="how-it-works">
-    <div class="container">
-      <div class="section-header">
-        <h2>Three commands. That's it.</h2>
-        <p class="section-sub">No setup wizards, no configuration files. Just start chatting.</p>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-text">
-            <h4>Get your address</h4>
-            <p>Send <code>/address</code> to get your unique deposit address. Your HD wallet is derived automatically — no seed phrase to manage.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-text">
-            <h4>Deposit USDC</h4>
-            <p>Send USDC on Avalanche or Base to your address. Check your balance anytime with <code>/balance</code>.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-text">
-            <h4>Top up anything</h4>
-            <p>Run <code>/topup 0xABC... 5 ETH.ETH</code> to swap $5 of USDC into ETH and deliver it to any address. Done.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Stats -->
+  <!-- Live Stats -->
   <section class="section" id="stats">
     <div class="container">
-      <div class="section-header">
-        <h2>Platform Stats</h2>
-        <p class="section-sub">Live data from this GiveWei instance.</p>
-      </div>
-      <div class="cards" id="cards">
-        <div class="card"><div class="label">Total Swaps</div><div class="value" id="topups">-</div></div>
-        <div class="card"><div class="label">Volume (USD)</div><div class="value" id="volume">-</div></div>
-        <div class="card"><div class="label">Unique Pairs</div><div class="value" id="pairs">-</div></div>
-        <div class="card"><div class="label">Providers</div><div class="value" id="providers">-</div></div>
-        <div class="card"><div class="label">Users</div><div class="value" id="users">-</div></div>
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-value" id="topups">—</div>
+          <div class="stat-label">Total Swaps</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-value" id="volume">—</div>
+          <div class="stat-label">Volume (USD)</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-value" id="pairs">—</div>
+          <div class="stat-label">Unique Pairs</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-value" id="providers">—</div>
+          <div class="stat-label">Providers</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-value" id="users">—</div>
+          <div class="stat-label">Users</div>
+        </div>
       </div>
       <div class="chart-grid">
         <div class="chart-card"><h3>Volume by Destination Asset</h3><canvas id="chart-asset"></canvas></div>
@@ -141,12 +74,99 @@
     </div>
   </section>
 
+  <!-- Features -->
+  <section class="section section-alt" id="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Built for speed, simplicity, and control</h2>
+        <p class="section-sub">Everything you need to keep wallets funded. Nothing you don't.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3>Instant Top-ups</h3>
+          <p>Fund any address in one command. GiveWei finds the best route, executes the swap from USDC, and delivers tokens in under a minute.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>Telegram Native</h3>
+          <p>No accounts, no passwords, no browser extensions. Open the bot in Telegram and start funding — in DMs or group chats.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>Self-Hosted</h3>
+          <p>Run your own instance with your own keys. Single-user or multi-user. Fully open source — your keys, your rules.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>Team Wallets</h3>
+          <p>Add the bot to a group chat and share a single wallet. Perfect for dev teams funding test addresses without passing keys around.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3>Live Tracking</h3>
+          <p>Every swap is tracked in real-time. Get notified the moment your top-up completes, or check status anytime.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3>Multi-Chain</h3>
+          <p>Swap to any supported asset across Avalanche, Base, Ethereum, Bitcoin, and more. One bot, every chain.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <h2>Three commands. That's it.</h2>
+        <p class="section-sub">No setup wizards, no configuration files. Just start chatting.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Get your address</h4>
+            <p>Send <code>/address</code> to get your unique deposit address. Your wallet is derived automatically — no seed phrase to manage.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Deposit USDC</h4>
+            <p>Send USDC on Avalanche or Base to your address. Check your balance anytime with <code>/balance</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Top up anything</h4>
+            <p>Run <code>/topup 0xABC... 5 ETH.ETH</code> to swap $5 of USDC into ETH and deliver it to any address. Done.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="section section-cta">
     <div class="container" style="text-align:center;">
       <h2>Ready to fund some wallets?</h2>
       <p class="section-sub" style="margin-bottom:2rem;">Start using GiveWei in Telegram right now, or self-host your own instance.</p>
-      <div class="hero-cta">
+      <div class="hero-cta" style="justify-content:center;">
         <a href="https://t.me/give_wei_bot" class="btn btn-lg btn-primary" target="_blank" rel="noopener">Open in Telegram</a>
         <a href="https://github.com/RaghavSood/fundbot" class="btn btn-lg btn-outline" target="_blank" rel="noopener">View on GitHub</a>
       </div>
@@ -205,7 +225,6 @@
         }
       });
 
-    // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
