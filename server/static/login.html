@@ -1,26 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GiveWei - Login</title>
-  <link rel="stylesheet" href="/style.css">
+  <title>GiveWei — Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body>
-  <div class="login-box">
-    <h1>GiveWei Login</h1>
-    <div id="error" class="error" style="display:none">Invalid password. Please try again.</div>
+<body class="bg-gray-950 text-gray-300 antialiased">
+  <div class="mx-auto mt-32 max-w-sm rounded-xl border border-gray-800 bg-gray-900 p-8">
+    <h1 class="text-xl font-bold text-white text-center mb-6">GiveWei Login</h1>
+    <div id="error" class="hidden mb-4 text-sm text-red-400">Invalid password. Please try again.</div>
     <form method="POST">
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required autofocus>
+      <div class="mb-4">
+        <label for="password" class="block text-xs font-medium text-gray-500 mb-1">Password</label>
+        <input type="password" id="password" name="password" required autofocus
+               class="w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:outline-none">
       </div>
-      <button type="submit">Sign In</button>
+      <button type="submit" class="w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition">Sign In</button>
     </form>
   </div>
   <script>
     if (location.search.includes('error=1')) {
-      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').classList.remove('hidden');
     }
   </script>
 </body>
