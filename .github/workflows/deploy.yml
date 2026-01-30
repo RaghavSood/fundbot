@@ -52,10 +52,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
 
           chmod +x fundbot
-          cat fundbot | ssh "${SSH_USER}@${SSH_SERVER}" "cat > ${SSH_PATH}/fundbot.new && chmod +x ${SSH_PATH}/fundbot.new && mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot && systemctl restart givewei"
+          rsync -e ssh fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh "${SSH_USER}@${SSH_SERVER}" "mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot && systemctl restart givewei"
 
   deploy-production:
     needs: build
@@ -77,7 +78,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
 
           chmod +x fundbot
-          cat fundbot | ssh "${SSH_USER}@${SSH_SERVER}" "cat > ${SSH_PATH}/fundbot.new && chmod +x ${SSH_PATH}/fundbot.new && mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot && systemctl restart givewei"
+          rsync -e ssh fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh "${SSH_USER}@${SSH_SERVER}" "mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot && systemctl restart givewei"
