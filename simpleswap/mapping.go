@@ -6,16 +6,47 @@ import (
 
 // assetToSymbol maps our Asset notation (CHAIN.SYMBOL) to SimpleSwap currency symbol.
 // This is a curated list of assets we support.
+// Note: kuji (Kujira) is not available on SimpleSwap.
+// Note: cro on SimpleSwap is an ERC20 token (ETH network), not native Cronos chain.
 var assetToSymbol = map[string]string{
-	"BTC.BTC":  "btc",
-	"ETH.ETH":  "eth",
+	// Major L1s
+	"BTC.BTC":   "btc",
+	"ETH.ETH":   "eth",
+	"SOL.SOL":   "sol",
+	"AVAX.AVAX": "avaxc", // C-chain, NOT X-chain
+	"DOT.DOT":   "dot",
+	"ADA.ADA":   "ada",
+	"TON.TON":   "ton",
+	"TRX.TRX":   "trx",
+	"SUI.SUI":   "sui",
+
+	// L2s / EVM sidechains
 	"BASE.ETH": "ethbase",
-	"SOL.SOL":  "sol",
-	"AVAX.AVAX": "avaxc",
 	"ARB.ETH":  "etharb",
-	"LTC.LTC":  "ltc",
+	"BSC.BNB":  "bnb-bsc",
+	"POLYGON.POL": "pol",
+
+	// Cosmos ecosystem
+	"GAIA.ATOM":  "atom",
+	"OSMO.OSMO":  "osmo",
+	"DYDX.DYDX":  "dydxmain",
+	"SEI.SEI":    "sei",
+	"AKASH.AKT":  "akt",
+	"NOBLE.USDC": "usdcnoble",
+	"LUNA.LUNA":   "luna",
+	"LUNC.LUNC":  "lunc",
+	"THOR.RUNE":  "rune",
+
+	// UTXO chains
+	"LTC.LTC":   "ltc",
+	"BCH.BCH":   "bch",
 	"DOGE.DOGE": "doge",
-	"BCH.BCH":  "bch",
+	"DASH.DASH": "dash",
+	"ZEC.ZEC":   "zec",
+
+	// Other
+	"HYPE.HYPE": "hype",
+	"CRO.CRO":   "cro", // ERC20 on ETH, not native Cronos
 }
 
 // sourceChainSymbol maps our RPC chain name to the SimpleSwap USDC symbol for that chain.
