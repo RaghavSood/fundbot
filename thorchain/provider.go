@@ -219,7 +219,15 @@ func (p *Provider) CheckStatus(ctx context.Context, txHash string) (string, erro
 		return "", err
 	}
 
-	if status.Stages.OutboundSigned.Completed {
+	// Cross-chain swaps: completed when outbound is signed
+	if status.Stages.OutboundSigned != nil && status.Stages.OutboundSigned.Completed {
+		return "completed", nil
+	}
+
+	// Native Thorchain swaps (e.g. to RUNE): no outbound_signed stage,
+	// completed when swap is finalised
+	if status.Stages.OutboundSigned == nil &&
+		status.Stages.SwapFinalised != nil && status.Stages.SwapFinalised.Completed {
 		return "completed", nil
 	}
 

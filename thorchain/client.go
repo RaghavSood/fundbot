@@ -55,13 +55,18 @@ type TxStage struct {
 	Completed bool `json:"completed"`
 }
 
+type SwapStage struct {
+	Pending bool `json:"pending"`
+}
+
 type TxStatusResponse struct {
 	Stages struct {
-		InboundObserved            TxStage `json:"inbound_observed"`
-		InboundConfirmationCounted TxStage `json:"inbound_confirmation_counted"`
-		InboundFinalised           TxStage `json:"inbound_finalised"`
-		SwapFinalised              TxStage `json:"swap_finalised"`
-		OutboundSigned             TxStage `json:"outbound_signed"`
+		InboundObserved            TxStage    `json:"inbound_observed"`
+		InboundConfirmationCounted TxStage    `json:"inbound_confirmation_counted"`
+		InboundFinalised           TxStage    `json:"inbound_finalised"`
+		SwapStatus                 *SwapStage `json:"swap_status"`
+		SwapFinalised              *TxStage   `json:"swap_finalised"`
+		OutboundSigned             *TxStage   `json:"outbound_signed"`
 	} `json:"stages"`
 }
 
