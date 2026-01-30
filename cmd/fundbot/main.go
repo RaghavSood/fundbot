@@ -53,7 +53,7 @@ func main() {
 	swapMgr := swaps.NewManager(tcProvider)
 
 	// Create and run bot
-	b, err := bot.New(cfg, database, swapMgr)
+	b, err := bot.New(cfg, database, swapMgr, rpcClients)
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)
 	}

@@ -239,6 +239,15 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result []userWithAddr
+	if s.cfg.Mode == config.ModeSingle {
+		// Always show the shared wallet (index 0), plus any registered users
+		addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, 0)
+		result = append(result, userWithAddr{
+			User:    db.User{ID: 0, Username: "(shared wallet)"},
+			Address: addr.Hex(),
+			Index:   0,
+		})
+	}
 	for _, u := range users {
 		var idx uint32
 		if s.cfg.Mode == config.ModeSingle {
