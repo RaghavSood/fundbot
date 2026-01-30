@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/RaghavSood/fundbot/balances"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
 )
@@ -43,17 +44,39 @@ func (p *Provider) Name() string {
 	return "simpleswap"
 }
 
-func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string) ([]swaps.Quote, error) {
+func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
 	toSymbol, ok := AssetToSymbol(toAsset)
 	if !ok {
 		return nil, fmt.Errorf("simpleswap: unsupported target asset %s", toAsset)
 	}
+
+	// Required USDC in smallest unit (6 decimals)
+	requiredUSDC := new(big.Int).SetInt64(int64(usdAmount * 1e6))
 
 	var quotes []swaps.Quote
 
 	for _, chain := range SupportedSourceChains() {
 		fromSymbol, ok := SourceSymbol(chain)
 		if !ok {
+			continue
+		}
+
+		// Check USDC balance on this chain
+		rpc, ok := p.rpcClients[chain]
+		if !ok {
+			continue
+		}
+		usdcAddr, ok := thorchain.USDCContracts[chain]
+		if !ok {
+			continue
+		}
+		bal, err := balances.USDCBalance(ctx, rpc, usdcAddr, sender)
+		if err != nil {
+			log.Printf("simpleswap: error checking USDC balance on %s: %v", chain, err)
+			continue
+		}
+		if bal.Cmp(requiredUSDC) < 0 {
+			log.Printf("simpleswap: skipping %s, insufficient USDC (have %s, need %s)", chain, bal, requiredUSDC)
 			continue
 		}
 

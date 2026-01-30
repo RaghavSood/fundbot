@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/RaghavSood/fundbot/balances"
 	"github.com/RaghavSood/fundbot/swaps"
 )
 
@@ -41,14 +42,36 @@ func (p *Provider) Name() string {
 	return "thorchain"
 }
 
-func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string) ([]swaps.Quote, error) {
+func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
 	// USDC has 6 decimals; Thorchain expects 1e8, so multiply USD by 1e8
 	// (1 USDC = 1 USD, 6 decimals native, thorchain uses 8 decimal representation)
 	thorAmount := int64(usdAmount * 1e8)
 
+	// Required USDC in smallest unit (6 decimals)
+	requiredUSDC := new(big.Int).SetInt64(int64(usdAmount * 1e6))
+
 	var quotes []swaps.Quote
 
 	for rpcKey, tcAsset := range SourceAssets {
+		// Check USDC balance on this chain
+		rpc, ok := p.rpcClients[rpcKey]
+		if !ok {
+			continue
+		}
+		usdcAddr, ok := USDCContracts[rpcKey]
+		if !ok {
+			continue
+		}
+		bal, err := balances.USDCBalance(ctx, rpc, usdcAddr, sender)
+		if err != nil {
+			log.Printf("thorchain: error checking USDC balance on %s: %v", rpcKey, err)
+			continue
+		}
+		if bal.Cmp(requiredUSDC) < 0 {
+			log.Printf("thorchain: skipping %s, insufficient USDC (have %s, need %s)", rpcKey, bal, requiredUSDC)
+			continue
+		}
+
 		quoteResp, err := p.client.GetQuote(ctx, tcAsset, toAsset.String(), destination, thorAmount)
 		if err != nil {
 			log.Printf("thorchain quote for %s via %s failed: %v", toAsset, rpcKey, err)

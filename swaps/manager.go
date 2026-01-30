@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"log"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Manager orchestrates swap providers and selects the best quote.
@@ -18,11 +20,12 @@ func NewManager(providers ...Provider) *Manager {
 }
 
 // BestQuote queries all providers and returns the quote with the highest expected output.
-func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float64, destination string) (*Quote, error) {
+// sender is the EVM address that will fund the swap.
+func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float64, destination string, sender common.Address) (*Quote, error) {
 	var best *Quote
 
 	for _, p := range m.providers {
-		quotes, err := p.Quote(ctx, toAsset, usdAmount, destination)
+		quotes, err := p.Quote(ctx, toAsset, usdAmount, destination, sender)
 		if err != nil {
 			log.Printf("provider %s quote error: %v", p.Name(), err)
 			continue

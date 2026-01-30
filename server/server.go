@@ -20,6 +20,7 @@ import (
 
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
+	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/wallet"
 )
 
@@ -339,7 +340,7 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	balances, err := FetchBalances(ctx, s.rpcClients, addresses)
+	balances, err := FetchBalances(ctx, s.rpcClients, addresses, thorchain.USDCContracts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

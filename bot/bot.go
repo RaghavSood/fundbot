@@ -10,12 +10,14 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/RaghavSood/fundbot/balances"
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/swaps"
+	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/version"
 	"github.com/RaghavSood/fundbot/wallet"
 )
@@ -126,7 +128,7 @@ func (b *Bot) handleBalance(msg *tgbotapi.Message) {
 	}
 
 	ctx := context.Background()
-	bals, err := balances.FetchBalances(ctx, b.rpcClients, []common.Address{addr})
+	bals, err := balances.FetchBalances(ctx, b.rpcClients, []common.Address{addr}, thorchain.USDCContracts)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error fetching balances: %v", err))
 		return
@@ -271,10 +273,21 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 		return
 	}
 
+	index, err := b.walletIndex(msg)
+	if err != nil {
+		b.reply(msg, fmt.Sprintf("Error: %v", err))
+		return
+	}
+	senderAddr, err := wallet.DeriveAddress(b.config.Mnemonic, index)
+	if err != nil {
+		b.reply(msg, fmt.Sprintf("Error deriving address: %v", err))
+		return
+	}
+
 	b.reply(msg, fmt.Sprintf("Fetching quote for $%.2f → %s to %s...", usdAmount, asset, destination))
 
 	ctx := context.Background()
-	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination)
+	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Quote error: %v", err))
 		return
@@ -298,10 +311,23 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
+	// Derive key early — needed for both balance check and execution
+	index, err := b.walletIndex(msg)
+	if err != nil {
+		b.reply(msg, fmt.Sprintf("Error: %v", err))
+		return
+	}
+	privateKey, err := wallet.DeriveKey(b.config.Mnemonic, index)
+	if err != nil {
+		b.reply(msg, fmt.Sprintf("Error deriving key: %v", err))
+		return
+	}
+	senderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+
 	b.reply(msg, fmt.Sprintf("Executing swap: $%.2f → %s to %s...", usdAmount, asset, destination))
 
 	ctx := context.Background()
-	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination)
+	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Quote error: %v", err))
 		return
@@ -310,19 +336,6 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, msg.Chat.ID, destination)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error storing quote: %v", err))
-		return
-	}
-
-	// Derive key for execution
-	index, err := b.walletIndex(msg)
-	if err != nil {
-		b.reply(msg, fmt.Sprintf("Error: %v", err))
-		return
-	}
-
-	privateKey, err := wallet.DeriveKey(b.config.Mnemonic, index)
-	if err != nil {
-		b.reply(msg, fmt.Sprintf("Error deriving key: %v", err))
 		return
 	}
 

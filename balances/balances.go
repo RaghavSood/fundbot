@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/RaghavSood/fundbot/contracts"
-	"github.com/RaghavSood/fundbot/thorchain"
 )
 
 var multicallAddr = common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11")
@@ -35,12 +34,36 @@ type AddressBalance struct {
 	USDCBalance   string `json:"usdc_balance"`   // smallest unit string
 }
 
+// USDCBalance returns the USDC balance (smallest unit) for a single address on a single chain.
+func USDCBalance(ctx context.Context, rpc *ethclient.Client, usdcAddr common.Address, addr common.Address) (*big.Int, error) {
+	balOfData, err := erc20ABI.Pack("balanceOf", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := rpc.CallContract(ctx, ethereum.CallMsg{
+		To:   &usdcAddr,
+		Data: balOfData,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(output) < 32 {
+		return big.NewInt(0), nil
+	}
+
+	bal := new(big.Int).SetBytes(output)
+	return bal, nil
+}
+
 // FetchBalances retrieves native + USDC balances for the given addresses on all chains.
-func FetchBalances(ctx context.Context, rpcClients map[string]*ethclient.Client, addresses []common.Address) ([]AddressBalance, error) {
+// usdcContracts maps chain key to USDC contract address.
+func FetchBalances(ctx context.Context, rpcClients map[string]*ethclient.Client, addresses []common.Address, usdcContracts map[string]common.Address) ([]AddressBalance, error) {
 	var results []AddressBalance
 
 	for chainKey, rpc := range rpcClients {
-		usdcAddr, ok := thorchain.USDCContracts[chainKey]
+		usdcAddr, ok := usdcContracts[chainKey]
 		if !ok {
 			continue
 		}

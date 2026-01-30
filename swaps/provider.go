@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Quote represents a swap quote from a provider.
@@ -36,7 +38,8 @@ type Provider interface {
 
 	// Quote returns quotes for swapping usdAmount worth of stablecoins to toAsset,
 	// one per supported source chain. The destination is the recipient address on the target chain.
-	Quote(ctx context.Context, toAsset Asset, usdAmount float64, destination string) ([]Quote, error)
+	// sender is the EVM address that will fund the swap (used to check USDC balances).
+	Quote(ctx context.Context, toAsset Asset, usdAmount float64, destination string, sender common.Address) ([]Quote, error)
 
 	// Execute submits the swap transaction for the given quote using the provided private key.
 	Execute(ctx context.Context, quote Quote, privateKey *ecdsa.PrivateKey) (ExecuteResult, error)
