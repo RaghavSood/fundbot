@@ -9,6 +9,11 @@
     "avalanche": "https://api.avax.network/ext/bc/C/rpc",
     "base": "https://mainnet.base.org"
   },
+  "providers": {
+    "simpleswap": {
+      "api_key": "your-simpleswap-api-key"
+    }
+  },
   "port": 8080,
   "dashboard_password": "",
   "admin_password": "changeme"
