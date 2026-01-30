@@ -1,0 +1,90 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build linux/amd64 binary
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -o fundbot ./cmd/fundbot
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fundbot-linux-amd64
+          path: fundbot
+
+  deploy-dev:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    strategy:
+      matrix:
+        environment: [dev-single, dev-multi]
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.environment }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fundbot-linux-amd64
+
+      - name: Deploy to ${{ matrix.environment }}
+        env:
+          SSH_SERVER: ${{ secrets.SSH_SERVER }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_PATH: ${{ secrets.SSH_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+
+          chmod +x fundbot
+          scp -i ~/.ssh/deploy_key fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_SERVER}" "
+            mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot
+            systemctl restart givewei
+          "
+
+  deploy-production:
+    needs: build
+    if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fundbot-linux-amd64
+
+      - name: Deploy to production
+        env:
+          SSH_SERVER: ${{ secrets.SSH_SERVER }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_PATH: ${{ secrets.SSH_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+
+          chmod +x fundbot
+          scp -i ~/.ssh/deploy_key fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_SERVER}" "
+            mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot
+            systemctl restart givewei
+          "
