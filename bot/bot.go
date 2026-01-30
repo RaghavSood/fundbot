@@ -415,6 +415,10 @@ func (b *Bot) reply(msg *tgbotapi.Message, text string) {
 	reply.ParseMode = "Markdown"
 	reply.DisableWebPagePreview = true
 	if _, err := b.api.Send(reply); err != nil {
-		log.Printf("Error sending message: %v", err)
+		log.Printf("Error sending markdown message, retrying as plain text: %v", err)
+		reply.ParseMode = ""
+		if _, err := b.api.Send(reply); err != nil {
+			log.Printf("Error sending plain text message: %v", err)
+		}
 	}
 }
