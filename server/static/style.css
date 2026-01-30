@@ -89,3 +89,33 @@ nav { background: #161b22; border-bottom: 1px solid #30363d; padding: 0.8rem 1re
 nav .brand { font-weight: 600; font-size: 1.1rem; color: #f0f3f6; }
 nav a { color: #8b949e; font-size: 0.9rem; }
 nav a:hover { color: #f0f3f6; text-decoration: none; }
+
+/* Hero */
+.hero { text-align: center; padding: 5rem 1rem 3rem; max-width: 700px; margin: 0 auto; }
+.hero h1 { font-size: 2.8rem; font-weight: 700; color: #f0f3f6; line-height: 1.15; margin-bottom: 1rem; }
+.hero-sub { font-size: 1.15rem; color: #8b949e; line-height: 1.6; margin-bottom: 2rem; }
+.hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-lg { padding: 0.75rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 8px; }
+.btn-outline { background: transparent; border: 1px solid #30363d; color: #c9d1d9; }
+.btn-outline:hover { background: #161b22; border-color: #58a6ff; color: #f0f3f6; text-decoration: none; }
+
+/* Features */
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0 4rem; }
+.feature { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 2rem; }
+.feature-icon { font-size: 2rem; margin-bottom: 0.8rem; }
+.feature h3 { font-size: 1.1rem; color: #f0f3f6; margin-bottom: 0.5rem; }
+.feature p { font-size: 0.92rem; color: #8b949e; line-height: 1.6; }
+
+/* How it works */
+.how-it-works { margin-bottom: 4rem; }
+.how-it-works h2 { font-size: 1.5rem; color: #f0f3f6; margin-bottom: 1.5rem; text-align: center; }
+.steps { display: flex; flex-direction: column; gap: 1.2rem; max-width: 600px; margin: 0 auto; }
+.step { display: flex; gap: 1.2rem; align-items: flex-start; background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; }
+.step-num { flex-shrink: 0; width: 2.2rem; height: 2.2rem; background: #238636; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: #fff; }
+.step-text h4 { font-size: 1rem; color: #f0f3f6; margin-bottom: 0.3rem; }
+.step-text p { font-size: 0.9rem; color: #8b949e; line-height: 1.5; }
+.step-text code { background: #21262d; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.82rem; color: #c9d1d9; }
+
+/* Footer */
+footer { border-top: 1px solid #30363d; padding: 1.5rem 0; margin-top: 2rem; }
+.footer-inner { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #8b949e; }

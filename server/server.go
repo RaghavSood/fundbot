@@ -54,12 +54,17 @@ func (s *Server) Start() error {
 	staticSub, _ := fs.Sub(staticFiles, "static")
 	fileServer := http.FileServer(http.FS(staticSub))
 
-	// Dashboard routes
-	mux.HandleFunc("/", s.withDashAuth(func(w http.ResponseWriter, r *http.Request) {
+	// Public landing page and static files
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
+		http.ServeFileFS(w, r, staticSub, "landing.html")
+	})
+
+	// Dashboard (auth-protected)
+	mux.HandleFunc("/dashboard", s.withDashAuth(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticSub, "index.html")
 	}))
 	mux.HandleFunc("/api/dashboard", s.withDashAuth(s.handleDashboardAPI))
@@ -160,7 +165,7 @@ func (s *Server) handleDashLogin(w http.ResponseWriter, r *http.Request) {
 	dashSessions[token] = true
 	sessionMu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: "dash_session", Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 func (s *Server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
