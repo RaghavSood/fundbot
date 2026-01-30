@@ -238,40 +238,57 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 		Index   uint32 `json:"index"`
 	}
 
+	// Build lookup maps for users and chats
+	userMap := make(map[int64]db.User)
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+	chatMap := make(map[int64]db.Chat)
+	if s.cfg.Mode == config.ModeMulti {
+		chats, err := s.store.ListChats(ctx)
+		if err == nil {
+			for _, c := range chats {
+				chatMap[c.ID] = c
+			}
+		}
+	}
+
 	var result []userWithAddr
 	if s.cfg.Mode == config.ModeSingle {
-		// Always show the shared wallet (index 0), plus any registered users
 		addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, 0)
 		result = append(result, userWithAddr{
 			User:    db.User{ID: 0, Username: "(shared wallet)"},
 			Address: addr.Hex(),
 			Index:   0,
 		})
-	}
-	for _, u := range users {
-		var idx uint32
-		if s.cfg.Mode == config.ModeSingle {
-			idx = 0
-		} else {
-			idx = uint32(u.ID)
+		for _, u := range users {
+			result = append(result, userWithAddr{User: u, Address: addr.Hex(), Index: 0})
 		}
-		addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, idx)
-		result = append(result, userWithAddr{User: u, Address: addr.Hex(), Index: idx})
-	}
-
-	// In multi mode, also show group chat wallets
-	if s.cfg.Mode == config.ModeMulti {
-		chats, err := s.store.ListChats(ctx)
-		if err == nil {
-			for _, c := range chats {
-				idx := uint32(c.ID) + 1_000_000
-				addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, idx)
-				result = append(result, userWithAddr{
-					User:    db.User{ID: c.ID, Username: fmt.Sprintf("(group: %s)", c.Title)},
-					Address: addr.Hex(),
-					Index:   idx,
-				})
+	} else {
+		assignments, err := s.store.ListAddressAssignments(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, a := range assignments {
+			idx := uint32(a.ID)
+			addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, idx)
+			var user db.User
+			switch a.AssignedToType {
+			case "user":
+				if u, ok := userMap[a.AssignedToID]; ok {
+					user = u
+				} else {
+					user = db.User{ID: a.AssignedToID, Username: "(unknown user)"}
+				}
+			case "chat":
+				if c, ok := chatMap[a.AssignedToID]; ok {
+					user = db.User{ID: c.ID, Username: fmt.Sprintf("(group: %s)", c.Title)}
+				} else {
+					user = db.User{ID: a.AssignedToID, Username: "(unknown chat)"}
+				}
 			}
+			result = append(result, userWithAddr{User: user, Address: addr.Hex(), Index: idx})
 		}
 	}
 
@@ -308,28 +325,17 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 		}
 		addresses = []common.Address{addr}
 	} else {
-		users, err := s.store.ListUsers(ctx)
+		assignments, err := s.store.ListAddressAssignments(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		for _, u := range users {
-			addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(u.ID))
+		for _, a := range assignments {
+			addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(a.ID))
 			if err != nil {
 				continue
 			}
 			addresses = append(addresses, addr)
-		}
-		// Include group chat wallets
-		chats, err := s.store.ListChats(ctx)
-		if err == nil {
-			for _, c := range chats {
-				addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID)+1_000_000)
-				if err != nil {
-					continue
-				}
-				addresses = append(addresses, addr)
-			}
 		}
 	}
 

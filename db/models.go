@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type AddressAssignment struct {
+	ID             int64
+	AssignedToID   int64
+	AssignedToType string
+	CreatedAt      time.Time
+}
+
 type Chat struct {
 	ID        int64
 	ChatID    int64

@@ -79,6 +79,25 @@ func (s *Store) GetOrCreateChat(ctx context.Context, chatID int64, title string)
 	})
 }
 
+// GetOrCreateAddressAssignment returns the address assignment for the given entity, creating one if needed.
+func (s *Store) GetOrCreateAddressAssignment(ctx context.Context, assignedToID int64, assignedToType string) (AddressAssignment, error) {
+	a, err := s.GetAddressAssignment(ctx, GetAddressAssignmentParams{
+		AssignedToID:   assignedToID,
+		AssignedToType: assignedToType,
+	})
+	if err == nil {
+		return a, nil
+	}
+	if err != sql.ErrNoRows {
+		return AddressAssignment{}, fmt.Errorf("querying address assignment: %w", err)
+	}
+
+	return s.CreateAddressAssignment(ctx, CreateAddressAssignmentParams{
+		AssignedToID:   assignedToID,
+		AssignedToType: assignedToType,
+	})
+}
+
 // InsertTopupWithShortID generates a random short ID and inserts the topup.
 func (s *Store) InsertTopupWithShortID(ctx context.Context, arg InsertTopupParams) (InsertTopupRow, error) {
 	arg.ShortID = generateShortID()

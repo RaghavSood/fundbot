@@ -376,27 +376,38 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 }
 
 // walletIndex returns the BIP44 derivation index for a message context.
-// Single mode: always 0. Multi mode DM: user row ID. Multi mode group: chat row ID.
+// Single mode: always 0. Multi mode: address_assignments row ID.
 func (b *Bot) walletIndex(msg *tgbotapi.Message) (uint32, error) {
 	if b.config.Mode == config.ModeSingle {
 		return 0, nil
 	}
 
 	ctx := context.Background()
+
+	var assignedToID int64
+	var assignedToType string
+
 	if msg.Chat.IsPrivate() {
 		user, err := b.db.GetOrCreateUser(ctx, msg.From.ID, msg.From.UserName)
 		if err != nil {
 			return 0, err
 		}
-		return uint32(user.ID), nil
+		assignedToID = user.ID
+		assignedToType = "user"
+	} else {
+		chat, err := b.db.GetOrCreateChat(ctx, msg.Chat.ID, msg.Chat.Title)
+		if err != nil {
+			return 0, err
+		}
+		assignedToID = chat.ID
+		assignedToType = "chat"
 	}
 
-	// Offset by 1,000,000 to avoid colliding with user-derived indices.
-	chat, err := b.db.GetOrCreateChat(ctx, msg.Chat.ID, msg.Chat.Title)
+	assignment, err := b.db.GetOrCreateAddressAssignment(ctx, assignedToID, assignedToType)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("address assignment: %w", err)
 	}
-	return uint32(chat.ID) + 1_000_000, nil
+	return uint32(assignment.ID), nil
 }
 
 func (b *Bot) reply(msg *tgbotapi.Message, text string) {
