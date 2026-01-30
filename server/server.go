@@ -259,6 +259,21 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 		result = append(result, userWithAddr{User: u, Address: addr.Hex(), Index: idx})
 	}
 
+	// In multi mode, also show group chat wallets
+	if s.cfg.Mode == config.ModeMulti {
+		chats, err := s.store.ListChats(ctx)
+		if err == nil {
+			for _, c := range chats {
+				addr, _ := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID))
+				result = append(result, userWithAddr{
+					User:    db.User{ID: c.ID, Username: fmt.Sprintf("(group: %s)", c.Title)},
+					Address: addr.Hex(),
+					Index:   uint32(c.ID),
+				})
+			}
+		}
+	}
+
 	writeJSON(w, result)
 }
 
@@ -303,6 +318,17 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			addresses = append(addresses, addr)
+		}
+		// Include group chat wallets
+		chats, err := s.store.ListChats(ctx)
+		if err == nil {
+			for _, c := range chats {
+				addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, uint32(c.ID))
+				if err != nil {
+					continue
+				}
+				addresses = append(addresses, addr)
+			}
 		}
 	}
 

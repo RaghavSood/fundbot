@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type Chat struct {
+	ID        int64
+	ChatID    int64
+	Title     string
+	CreatedAt time.Time
+}
+
 type Quote struct {
 	ID             int64
 	Type           string
@@ -25,6 +32,7 @@ type Quote struct {
 	VaultAddress   string
 	Expiry         int64
 	CreatedAt      time.Time
+	ChatID         int64
 }
 
 type Topup struct {
@@ -38,6 +46,7 @@ type Topup struct {
 	TxHash    string
 	Status    string
 	CreatedAt time.Time
+	ChatID    int64
 }
 
 type User struct {

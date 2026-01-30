@@ -58,12 +58,22 @@ func (b *Bot) Run() error {
 			continue
 		}
 
-		if !b.config.IsAuthorized(update.Message.From.ID) {
-			b.reply(update.Message, "You are not authorized to use this bot.")
+		msg := update.Message
+		isGroup := !msg.Chat.IsPrivate()
+
+		if isGroup && b.config.Mode == config.ModeSingle {
+			b.reply(msg, "Group chats are not supported in single mode.")
 			continue
 		}
 
-		b.handleMessage(update.Message)
+		// In group chats (multi mode), all users are authorized.
+		// In DMs, check the whitelist/admin.
+		if !isGroup && !b.config.IsAuthorized(msg.From.ID) {
+			b.reply(msg, "You are not authorized to use this bot.")
+			continue
+		}
+
+		b.handleMessage(msg)
 	}
 
 	return nil
@@ -97,7 +107,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 }
 
 func (b *Bot) handleBalance(msg *tgbotapi.Message) {
-	index, err := b.walletIndex(msg.From.ID, msg.From.UserName)
+	index, err := b.walletIndex(msg)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error: %v", err))
 		return
@@ -184,7 +194,7 @@ func (b *Bot) handleStart(msg *tgbotapi.Message) {
 }
 
 func (b *Bot) handleAddress(msg *tgbotapi.Message) {
-	index, err := b.walletIndex(msg.From.ID, msg.From.UserName)
+	index, err := b.walletIndex(msg)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error: %v", err))
 		return
@@ -228,7 +238,7 @@ func parseSwapArgs(args string) (destination string, usdAmount float64, asset sw
 	return
 }
 
-func (b *Bot) insertQuote(ctx context.Context, quote *swaps.Quote, userID int64, destination string) (int64, error) {
+func (b *Bot) insertQuote(ctx context.Context, quote *swaps.Quote, userID int64, chatID int64, destination string) (int64, error) {
 	return b.db.InsertQuote(ctx, db.InsertQuoteParams{
 		Type:           "fast",
 		Provider:       quote.Provider,
@@ -244,6 +254,7 @@ func (b *Bot) insertQuote(ctx context.Context, quote *swaps.Quote, userID int64,
 		Router:         quote.Router,
 		VaultAddress:   quote.VaultAddress,
 		Expiry:         quote.Expiry,
+		ChatID:         chatID,
 	})
 }
 
@@ -263,7 +274,7 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 		return
 	}
 
-	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, destination)
+	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, msg.Chat.ID, destination)
 	if err != nil {
 		log.Printf("Error storing quote: %v", err)
 	}
@@ -290,14 +301,14 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
-	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, destination)
+	quoteID, err := b.insertQuote(ctx, quote, msg.From.ID, msg.Chat.ID, destination)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error storing quote: %v", err))
 		return
 	}
 
 	// Derive key for execution
-	index, err := b.walletIndex(msg.From.ID, msg.From.UserName)
+	index, err := b.walletIndex(msg)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error: %v", err))
 		return
@@ -324,6 +335,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		FromChain: quote.FromChain,
 		TxHash:    txHash,
 		Status:    "pending",
+		ChatID:    msg.Chat.ID,
 	})
 	if err != nil {
 		log.Printf("Error storing topup: %v", err)
@@ -357,19 +369,27 @@ func (b *Bot) handleStatus(msg *tgbotapi.Message) {
 	b.reply(msg, text)
 }
 
-// walletIndex returns the BIP44 derivation index for a user.
-// Single mode: always 0. Multi mode: SQLite row ID.
-func (b *Bot) walletIndex(telegramID int64, username string) (uint32, error) {
+// walletIndex returns the BIP44 derivation index for a message context.
+// Single mode: always 0. Multi mode DM: user row ID. Multi mode group: chat row ID.
+func (b *Bot) walletIndex(msg *tgbotapi.Message) (uint32, error) {
 	if b.config.Mode == config.ModeSingle {
 		return 0, nil
 	}
 
 	ctx := context.Background()
-	user, err := b.db.GetOrCreateUser(ctx, telegramID, username)
+	if msg.Chat.IsPrivate() {
+		user, err := b.db.GetOrCreateUser(ctx, msg.From.ID, msg.From.UserName)
+		if err != nil {
+			return 0, err
+		}
+		return uint32(user.ID), nil
+	}
+
+	chat, err := b.db.GetOrCreateChat(ctx, msg.Chat.ID, msg.Chat.Title)
 	if err != nil {
 		return 0, err
 	}
-	return uint32(user.ID), nil
+	return uint32(chat.ID), nil
 }
 
 func (b *Bot) reply(msg *tgbotapi.Message, text string) {

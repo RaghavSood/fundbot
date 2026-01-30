@@ -7,17 +7,32 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const getTopupByShortID = `-- name: GetTopupByShortID :one
-SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, created_at
 FROM topups
 WHERE short_id = ?
 `
 
-func (q *Queries) GetTopupByShortID(ctx context.Context, shortID string) (Topup, error) {
+type GetTopupByShortIDRow struct {
+	ID        int64
+	ShortID   string
+	Type      string
+	QuoteID   int64
+	UserID    int64
+	Provider  string
+	FromChain string
+	TxHash    string
+	Status    string
+	ChatID    int64
+	CreatedAt time.Time
+}
+
+func (q *Queries) GetTopupByShortID(ctx context.Context, shortID string) (GetTopupByShortIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getTopupByShortID, shortID)
-	var i Topup
+	var i GetTopupByShortIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ShortID,
@@ -28,14 +43,15 @@ func (q *Queries) GetTopupByShortID(ctx context.Context, shortID string) (Topup,
 		&i.FromChain,
 		&i.TxHash,
 		&i.Status,
+		&i.ChatID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const insertTopup = `-- name: InsertTopup :one
-INSERT INTO topups (short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO topups (short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, short_id
 `
 
@@ -48,6 +64,7 @@ type InsertTopupParams struct {
 	FromChain string
 	TxHash    string
 	Status    string
+	ChatID    int64
 }
 
 type InsertTopupRow struct {
@@ -65,6 +82,7 @@ func (q *Queries) InsertTopup(ctx context.Context, arg InsertTopupParams) (Inser
 		arg.FromChain,
 		arg.TxHash,
 		arg.Status,
+		arg.ChatID,
 	)
 	var i InsertTopupRow
 	err := row.Scan(&i.ID, &i.ShortID)
@@ -72,19 +90,33 @@ func (q *Queries) InsertTopup(ctx context.Context, arg InsertTopupParams) (Inser
 }
 
 const listPendingTopups = `-- name: ListPendingTopups :many
-SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, created_at
+SELECT id, short_id, type, quote_id, user_id, provider, from_chain, tx_hash, status, chat_id, created_at
 FROM topups WHERE status = 'pending' ORDER BY created_at
 `
 
-func (q *Queries) ListPendingTopups(ctx context.Context) ([]Topup, error) {
+type ListPendingTopupsRow struct {
+	ID        int64
+	ShortID   string
+	Type      string
+	QuoteID   int64
+	UserID    int64
+	Provider  string
+	FromChain string
+	TxHash    string
+	Status    string
+	ChatID    int64
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListPendingTopups(ctx context.Context) ([]ListPendingTopupsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPendingTopups)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Topup
+	var items []ListPendingTopupsRow
 	for rows.Next() {
-		var i Topup
+		var i ListPendingTopupsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShortID,
@@ -95,6 +127,7 @@ func (q *Queries) ListPendingTopups(ctx context.Context) ([]Topup, error) {
 			&i.FromChain,
 			&i.TxHash,
 			&i.Status,
+			&i.ChatID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

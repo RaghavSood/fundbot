@@ -92,15 +92,21 @@ func (t *Tracker) poll(ctx context.Context) {
 	}
 }
 
-func (t *Tracker) notifyUser(topup db.Topup) {
+func (t *Tracker) notifyUser(topup db.ListPendingTopupsRow) {
 	explorerURL := t.cfg.ExplorerTxURL(topup.FromChain, topup.TxHash)
 	text := fmt.Sprintf("*Topup %s Complete*\nYour swap has been completed successfully.\nTx: `%s`\n[View on Explorer](%s)",
 		topup.ShortID, topup.TxHash, explorerURL)
 
-	msg := tgbotapi.NewMessage(topup.UserID, text)
+	// Notify the chat where the topup was initiated; fall back to user DM for legacy topups.
+	chatID := topup.ChatID
+	if chatID == 0 {
+		chatID = topup.UserID
+	}
+
+	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
 	msg.DisableWebPagePreview = true
 	if _, err := t.botAPI.Send(msg); err != nil {
-		log.Printf("Tracker: error notifying user %d: %v", topup.UserID, err)
+		log.Printf("Tracker: error notifying chat %d: %v", chatID, err)
 	}
 }

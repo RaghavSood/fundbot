@@ -60,15 +60,28 @@ SELECT t.id, t.short_id, t.type, t.quote_id, t.user_id, t.provider, t.from_chain
 FROM topups t WHERE t.user_id = ? ORDER BY t.created_at DESC
 `
 
-func (q *Queries) GetTopupsByUserID(ctx context.Context, userID int64) ([]Topup, error) {
+type GetTopupsByUserIDRow struct {
+	ID        int64
+	ShortID   string
+	Type      string
+	QuoteID   int64
+	UserID    int64
+	Provider  string
+	FromChain string
+	TxHash    string
+	Status    string
+	CreatedAt time.Time
+}
+
+func (q *Queries) GetTopupsByUserID(ctx context.Context, userID int64) ([]GetTopupsByUserIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTopupsByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Topup
+	var items []GetTopupsByUserIDRow
 	for rows.Next() {
-		var i Topup
+		var i GetTopupsByUserIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShortID,

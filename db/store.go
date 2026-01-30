@@ -63,6 +63,22 @@ func (s *Store) GetOrCreateUser(ctx context.Context, telegramID int64, username 
 	})
 }
 
+// GetOrCreateChat returns the chat for a Telegram chat ID, creating one if needed.
+func (s *Store) GetOrCreateChat(ctx context.Context, chatID int64, title string) (Chat, error) {
+	chat, err := s.GetChatByChatID(ctx, chatID)
+	if err == nil {
+		return chat, nil
+	}
+	if err != sql.ErrNoRows {
+		return Chat{}, fmt.Errorf("querying chat: %w", err)
+	}
+
+	return s.CreateChat(ctx, CreateChatParams{
+		ChatID: chatID,
+		Title:  title,
+	})
+}
+
 // InsertTopupWithShortID generates a random short ID and inserts the topup.
 func (s *Store) InsertTopupWithShortID(ctx context.Context, arg InsertTopupParams) (InsertTopupRow, error) {
 	arg.ShortID = generateShortID()

@@ -7,18 +7,39 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const getQuote = `-- name: GetQuote :one
 SELECT id, type, provider, user_id, from_asset, from_chain, to_asset, destination,
-    input_amount_usd, input_amount, expected_output, memo, router, vault_address, expiry, created_at
+    input_amount_usd, input_amount, expected_output, memo, router, vault_address, expiry, chat_id, created_at
 FROM quotes
 WHERE id = ?
 `
 
-func (q *Queries) GetQuote(ctx context.Context, id int64) (Quote, error) {
+type GetQuoteRow struct {
+	ID             int64
+	Type           string
+	Provider       string
+	UserID         int64
+	FromAsset      string
+	FromChain      string
+	ToAsset        string
+	Destination    string
+	InputAmountUsd float64
+	InputAmount    string
+	ExpectedOutput string
+	Memo           string
+	Router         string
+	VaultAddress   string
+	Expiry         int64
+	ChatID         int64
+	CreatedAt      time.Time
+}
+
+func (q *Queries) GetQuote(ctx context.Context, id int64) (GetQuoteRow, error) {
 	row := q.db.QueryRowContext(ctx, getQuote, id)
-	var i Quote
+	var i GetQuoteRow
 	err := row.Scan(
 		&i.ID,
 		&i.Type,
@@ -35,6 +56,7 @@ func (q *Queries) GetQuote(ctx context.Context, id int64) (Quote, error) {
 		&i.Router,
 		&i.VaultAddress,
 		&i.Expiry,
+		&i.ChatID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -43,8 +65,8 @@ func (q *Queries) GetQuote(ctx context.Context, id int64) (Quote, error) {
 const insertQuote = `-- name: InsertQuote :one
 INSERT INTO quotes (
     type, provider, user_id, from_asset, from_chain, to_asset, destination,
-    input_amount_usd, input_amount, expected_output, memo, router, vault_address, expiry
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    input_amount_usd, input_amount, expected_output, memo, router, vault_address, expiry, chat_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id
 `
 
@@ -63,6 +85,7 @@ type InsertQuoteParams struct {
 	Router         string
 	VaultAddress   string
 	Expiry         int64
+	ChatID         int64
 }
 
 func (q *Queries) InsertQuote(ctx context.Context, arg InsertQuoteParams) (int64, error) {
@@ -81,6 +104,7 @@ func (q *Queries) InsertQuote(ctx context.Context, arg InsertQuoteParams) (int64
 		arg.Router,
 		arg.VaultAddress,
 		arg.Expiry,
+		arg.ChatID,
 	)
 	var id int64
 	err := row.Scan(&id)
