@@ -60,8 +60,8 @@ jobs:
           sha256sum ~/.ssh/id_ed25519
 
           chmod +x fundbot
-          scp -i ~/.ssh/id_ed25519 fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
-          ssh -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_SERVER}" "
+          scp fundbot "${SSH_USER}@${SSH_SERVER}:${SSH_PATH}/fundbot.new"
+          ssh "${SSH_USER}@${SSH_SERVER}" "
             mv ${SSH_PATH}/fundbot.new ${SSH_PATH}/fundbot
             systemctl restart givewei
           "
