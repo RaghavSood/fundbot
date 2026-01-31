@@ -256,11 +256,17 @@ func (b *Bot) handleStart(msg *tgbotapi.Message) {
 		"*Commands:*\n" +
 		"/address - Show your wallet address\n" +
 		"/balance - Show wallet balances\n" +
-		"/quote `<address> <amount> <CHAIN.ASSET> [routing]` - Get a swap quote\n" +
-		"/topup `<address> <amount> <CHAIN.ASSET> [routing]` - Execute a swap\n" +
+		"/quote `<addr> <amount> <CHAIN.ASSET> [routing]`\n" +
+		"/topup `<addr> <amount> <CHAIN.ASSET> [routing]`\n" +
 		"/status `<topup_id>` - Check topup status\n\n" +
 		"*Asset examples:*\n" +
-		"`BTC.BTC`, `ETH.ETH`, `ETH.LINK-0x514910771AF9Ca656af840dff83E8264EcF986CA`"
+		"`BTC.BTC`, `ETH.ETH`, `SOL.SOL`, `DOGE.DOGE`\n\n" +
+		"*Routing hints* (optional):\n" +
+		"`thorchain` - DEX, non-custodial\n" +
+		"`simpleswap` - Private, custodial\n" +
+		"`dex` - Any DEX provider\n" +
+		"`private` - Any private/custodial provider\n" +
+		"Omit for best price across all providers."
 	b.reply(msg, text)
 }
 
