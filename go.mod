@@ -3,6 +3,7 @@ module github.com/RaghavSood/fundbot
 go 1.25.5
 
 require (
+	github.com/defuse-protocol/one-click-sdk-go v0.1.15
 	github.com/ethereum/go-ethereum v1.16.8
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/mattn/go-sqlite3 v1.14.33

@@ -12,6 +12,9 @@
   "providers": {
     "simpleswap": {
       "api_key": "your-simpleswap-api-key"
+    },
+    "nearintents": {
+      "api_key": "your-near-intents-api-key"
     }
   },
   "port": 8080,
