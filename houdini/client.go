@@ -108,6 +108,9 @@ func (c *Client) CreateExchange(ctx context.Context, from, to string, amount flo
 		"addressTo": addressTo,
 		"anonymous": false,
 		"inQuoteId": quoteID,
+		"ip":        "0.0.0.0",
+		"userAgent": "GiveWei",
+		"timezone":  "UTC",
 	}
 
 	jsonBody, err := json.Marshal(payload)
