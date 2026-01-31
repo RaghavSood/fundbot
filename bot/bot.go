@@ -256,8 +256,8 @@ func (b *Bot) handleStart(msg *tgbotapi.Message) {
 		"*Commands:*\n" +
 		"/address - Show your wallet address\n" +
 		"/balance - Show wallet balances\n" +
-		"/quote `<address> <amount> <CHAIN.ASSET>` - Get a swap quote\n" +
-		"/topup `<address> <amount> <CHAIN.ASSET>` - Execute a swap\n" +
+		"/quote `<address> <amount> <CHAIN.ASSET> [routing]` - Get a swap quote\n" +
+		"/topup `<address> <amount> <CHAIN.ASSET> [routing]` - Execute a swap\n" +
 		"/status `<topup_id>` - Check topup status\n\n" +
 		"*Asset examples:*\n" +
 		"`BTC.BTC`, `ETH.ETH`, `ETH.LINK-0x514910771AF9Ca656af840dff83E8264EcF986CA`"
@@ -280,11 +280,20 @@ func (b *Bot) handleAddress(msg *tgbotapi.Message) {
 	b.reply(msg, fmt.Sprintf("Your wallet address: `%s`", addr.Hex()))
 }
 
-// parseSwapArgs parses "<address> <amount> <CHAIN.ASSET>" from command arguments
-func parseSwapArgs(args string) (destination string, usdAmount float64, asset swaps.Asset, err error) {
+// validHints maps accepted routing hint strings to their type and normalized value.
+var validHints = map[string]swaps.RoutingHint{
+	"thorchain":  {Type: "provider", Value: "thorchain"},
+	"simpleswap": {Type: "provider", Value: "simpleswap"},
+	"dex":        {Type: "category", Value: "dex"},
+	"private":    {Type: "category", Value: "private"},
+}
+
+// parseSwapArgs parses "<address> <amount> <CHAIN.ASSET> [routing_hint]" from command arguments.
+// The routing hint is optional: a provider name (thorchain, simpleswap) or category (dex, private).
+func parseSwapArgs(args string) (destination string, usdAmount float64, asset swaps.Asset, hint swaps.RoutingHint, err error) {
 	fields := strings.Fields(args)
-	if len(fields) != 3 {
-		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET>")
+	if len(fields) < 3 || len(fields) > 4 {
+		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET> [thorchain|simpleswap|dex|private]")
 		return
 	}
 
@@ -304,6 +313,15 @@ func parseSwapArgs(args string) (destination string, usdAmount float64, asset sw
 	if err != nil {
 		err = fmt.Errorf("invalid asset: %v", err)
 		return
+	}
+
+	if len(fields) == 4 {
+		h, ok := validHints[strings.ToLower(fields[3])]
+		if !ok {
+			err = fmt.Errorf("unknown routing hint %q (use thorchain, simpleswap, dex, or private)", fields[3])
+			return
+		}
+		hint = h
 	}
 
 	return
@@ -330,9 +348,9 @@ func (b *Bot) insertQuote(ctx context.Context, quote *swaps.Quote, userID int64,
 }
 
 func (b *Bot) handleQuote(msg *tgbotapi.Message) {
-	destination, usdAmount, asset, err := parseSwapArgs(msg.CommandArguments())
+	destination, usdAmount, asset, hint, err := parseSwapArgs(msg.CommandArguments())
 	if err != nil {
-		b.reply(msg, fmt.Sprintf("Error: %v\nUsage: /quote <address> <amount> <CHAIN.ASSET>", err))
+		b.reply(msg, fmt.Sprintf("Error: %v\nUsage: /quote <address> <amount> <CHAIN.ASSET> [routing]", err))
 		return
 	}
 
@@ -350,7 +368,7 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 	b.reply(msg, fmt.Sprintf("Fetching quote for $%.2f → %s to %s...", usdAmount, asset, destination))
 
 	ctx := context.Background()
-	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr)
+	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr, hint)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Quote error: %v", err))
 		return
@@ -368,9 +386,9 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 }
 
 func (b *Bot) handleTopup(msg *tgbotapi.Message) {
-	destination, usdAmount, asset, err := parseSwapArgs(msg.CommandArguments())
+	destination, usdAmount, asset, hint, err := parseSwapArgs(msg.CommandArguments())
 	if err != nil {
-		b.reply(msg, fmt.Sprintf("Error: %v\nUsage: /topup <address> <amount> <CHAIN.ASSET>", err))
+		b.reply(msg, fmt.Sprintf("Error: %v\nUsage: /topup <address> <amount> <CHAIN.ASSET> [routing]", err))
 		return
 	}
 
@@ -390,7 +408,7 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 	b.reply(msg, fmt.Sprintf("Executing swap: $%.2f → %s to %s...", usdAmount, asset, destination))
 
 	ctx := context.Background()
-	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr)
+	quote, err := b.swapMgr.BestQuote(ctx, asset, usdAmount, destination, senderAddr, hint)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Quote error: %v", err))
 		return

@@ -31,10 +31,19 @@ type ExecuteResult struct {
 	ExternalID string // provider-specific ID (e.g. SimpleSwap exchange ID)
 }
 
+// RoutingHint controls provider selection for a quote request.
+type RoutingHint struct {
+	Type  string // "" (no hint), "provider", or "category"
+	Value string // provider name or category ("dex", "private")
+}
+
 // Provider is the interface that swap providers must implement.
 type Provider interface {
 	// Name returns the provider identifier (e.g. "thorchain").
 	Name() string
+
+	// Category returns the provider category: "dex" or "private".
+	Category() string
 
 	// Quote returns quotes for swapping usdAmount worth of stablecoins to toAsset,
 	// one per supported source chain. The destination is the recipient address on the target chain.

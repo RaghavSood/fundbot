@@ -42,6 +42,10 @@ func (p *Provider) Name() string {
 	return "thorchain"
 }
 
+func (p *Provider) Category() string {
+	return "dex"
+}
+
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
 	// USDC has 6 decimals; Thorchain expects 1e8, so multiply USD by 1e8
 	// (1 USDC = 1 USD, 6 decimals native, thorchain uses 8 decimal representation)
