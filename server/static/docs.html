@@ -134,9 +134,14 @@
             <td class="py-3 text-gray-400">Force SimpleSwap. Fails if the pair isn't supported.</td>
           </tr>
           <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">near</code></td>
+            <td class="py-3 pr-4 text-gray-500">provider</td>
+            <td class="py-3 text-gray-400">Force Near Intents. Fails if the pair isn't supported.</td>
+          </tr>
+          <tr>
             <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">dex</code></td>
             <td class="py-3 pr-4 text-gray-500">category</td>
-            <td class="py-3 text-gray-400">Only use DEX providers (currently Thorchain). Non-custodial.</td>
+            <td class="py-3 text-gray-400">Only use DEX providers (Thorchain and Near Intents). Non-custodial.</td>
           </tr>
           <tr>
             <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">private</code></td>
@@ -176,12 +181,25 @@
           Custodial exchange aggregator. The bot creates an exchange via SimpleSwap's API, then sends USDC to a deposit address. SimpleSwap handles the swap and delivers the output. Supports 29+ assets including BTC, ETH, SOL, DOGE, XRP, ADA, DOT, ATOM, and more.
         </p>
       </div>
+
+      <div class="rounded-xl border border-gray-800 bg-surface p-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400 text-sm font-bold">NI</div>
+          <div>
+            <h3 class="font-semibold text-white">Near Intents</h3>
+            <span class="text-xs text-gray-500">DEX &middot; Intent-based</span>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-gray-400">
+          Intent-based cross-chain swaps powered by the NEAR protocol. The bot requests a quote via the 1Click API, deposits USDC to a one-time address, and solvers compete to fill the order at the best rate. Supports BTC, ETH, SOL, AVAX, and 10+ other assets. Track swaps at <a href="https://explorer.near-intents.org/" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">explorer.near-intents.org</a>.
+        </p>
+      </div>
     </div>
 
     <!-- Supported Assets -->
     <h2 class="mt-14 text-2xl font-bold text-white" id="assets">Supported Assets</h2>
     <p class="mt-4 text-sm leading-relaxed text-gray-400">
-      Assets are specified in <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">CHAIN.ASSET</code> format (Thorchain notation). Both providers understand this format.
+      Assets are specified in <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">CHAIN.ASSET</code> format (Thorchain notation). All providers understand this format.
     </p>
     <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 text-sm">
       <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BTC.BTC</code></div>
