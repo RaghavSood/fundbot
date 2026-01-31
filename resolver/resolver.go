@@ -31,15 +31,18 @@ type Resolver struct {
 	near  *nearMatcher
 	// simpleswapLookup checks the SimpleSwap static mapping.
 	simpleswapLookup func(key string) (string, bool)
+	// houdiniLookup checks the Houdini static mapping.
+	houdiniLookup func(key string) (string, bool)
 }
 
-// New creates a new Resolver. simpleswapLookup should check the SimpleSwap static assetToSymbol map.
-func New(cgAPIKey string, simpleswapLookup func(key string) (string, bool)) *Resolver {
+// New creates a new Resolver.
+func New(cgAPIKey string, simpleswapLookup func(key string) (string, bool), houdiniLookup func(key string) (string, bool)) *Resolver {
 	return &Resolver{
 		cg:               newCoingeckoClient(cgAPIKey),
 		pools:            newPoolMatcher(),
 		near:             newNearMatcher(),
 		simpleswapLookup: simpleswapLookup,
+		houdiniLookup:    houdiniLookup,
 	}
 }
 
@@ -81,6 +84,9 @@ func (r *Resolver) Resolve(ctx context.Context, asset swaps.Asset) (*Resolution,
 
 	// --- SimpleSwap matching ---
 	r.matchSimpleSwap(asset, res)
+
+	// --- Houdini matching ---
+	r.matchHoudini(asset, res)
 
 	if len(res.Providers) == 0 {
 		return nil, fmt.Errorf("token %s (%s) found on CoinGecko but not supported by any provider", res.Name, res.Symbol)
@@ -169,6 +175,36 @@ func (r *Resolver) matchSimpleSwap(asset swaps.Asset, res *Resolution) {
 	}
 }
 
+func (r *Resolver) matchHoudini(asset swaps.Asset, res *Resolution) {
+	if r.houdiniLookup == nil {
+		return
+	}
+
+	// Try using the Thorchain asset notation if we matched Thorchain.
+	for _, pm := range res.Providers {
+		if pm.Provider == "thorchain" {
+			parts := strings.SplitN(pm.AssetID, ".", 2)
+			if len(parts) == 2 {
+				symbolPart := parts[1]
+				if idx := strings.Index(symbolPart, "-"); idx != -1 {
+					symbolPart = symbolPart[:idx]
+				}
+				key := parts[0] + "." + symbolPart
+				if sym, ok := r.houdiniLookup(strings.ToUpper(key)); ok {
+					res.Providers = append(res.Providers, ProviderMatch{Provider: "houdini", AssetID: sym})
+					return
+				}
+			}
+		}
+	}
+
+	// Fallback: try the original user-provided chain.symbol.
+	key := strings.ToUpper(asset.Chain + "." + asset.Symbol)
+	if sym, ok := r.houdiniLookup(key); ok {
+		res.Providers = append(res.Providers, ProviderMatch{Provider: "houdini", AssetID: sym})
+	}
+}
+
 // ToHints converts a Resolution into ResolvedHints for the swap providers.
 func (res *Resolution) ToHints() *swaps.ResolvedHints {
 	hints := &swaps.ResolvedHints{}
@@ -180,6 +216,8 @@ func (res *Resolution) ToHints() *swaps.ResolvedHints {
 			hints.SimpleSwapSymbol = pm.AssetID
 		case "nearintents":
 			hints.NearIntentsTokenID = pm.AssetID
+		case "houdini":
+			hints.HoudiniSymbol = pm.AssetID
 		}
 	}
 	return hints
