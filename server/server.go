@@ -63,6 +63,9 @@ func (s *Server) Start() error {
 		}
 		http.ServeFileFS(w, r, staticSub, "index.html")
 	})
+	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, staticSub, "docs.html")
+	})
 	mux.HandleFunc("/api/dashboard", s.handleDashboardAPI)
 	mux.HandleFunc("/api/charts", s.handleChartsAPI)
 

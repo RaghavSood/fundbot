@@ -23,8 +23,8 @@
       <a href="/" class="text-lg font-bold text-white tracking-tight">GiveWei</a>
       <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
         <a href="#stats" class="hover:text-white transition">Stats</a>
-        <a href="#features" class="hover:text-white transition">Features</a>
         <a href="#how-it-works" class="hover:text-white transition">How It Works</a>
+        <a href="/docs" class="hover:text-white transition">Docs</a>
         <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener" class="hover:text-white transition">GitHub</a>
       </div>
     </div>
@@ -35,17 +35,21 @@
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_-10%,rgba(59,130,246,0.12),transparent)]"></div>
     <div class="relative mx-auto max-w-3xl px-6 pt-24 pb-16 text-center">
       <h1 class="text-5xl font-extrabold tracking-tight text-white sm:text-6xl leading-[1.08]">
-        Fund any wallet,<br>
+        Top up any wallet,<br>
         <span class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">straight from Telegram</span>
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-        Send gas or tokens to any address on any chain — no sign-ups, no extensions, just one command. Deposit USDC, pick a destination, and GiveWei handles the rest.
+        Initialize new addresses, refill gas, or send tokens to any chain — one command, no extensions. Deposit USDC on Base or Avalanche and GiveWei swaps it to 29+ assets via Thorchain or SimpleSwap.
       </p>
       <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
         <a href="https://t.me/give_wei_bot" target="_blank" rel="noopener"
            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition">
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.53 8.15l-1.79 8.47c-.13.6-.48.74-.98.46l-2.71-2-1.31 1.26c-.14.14-.27.27-.55.27l.19-2.77 5.03-4.54c.22-.19-.05-.3-.34-.12l-6.21 3.91-2.68-.84c-.58-.18-.59-.58.12-.86l10.47-4.04c.49-.17.91.12.76.8z"/></svg>
           Open in Telegram
+        </a>
+        <a href="/docs"
+           class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-300 hover:border-blue-500 hover:text-white transition">
+          Read the Docs
         </a>
         <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener"
            class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-300 hover:border-blue-500 hover:text-white transition">
@@ -105,88 +109,56 @@
     </div>
   </section>
 
-  <!-- Features -->
-  <section id="features" class="border-t border-gray-800/60 bg-surface-alt py-20">
+  <!-- How It Works -->
+  <section id="how-it-works" class="border-t border-gray-800/60 bg-surface-alt py-20">
     <div class="mx-auto max-w-6xl px-6">
       <div class="text-center">
-        <h2 class="text-3xl font-bold text-white">Built for speed, simplicity, and control</h2>
-        <p class="mx-auto mt-3 max-w-lg text-gray-400">Everything you need to keep wallets funded. Nothing you don't.</p>
+        <h2 class="text-3xl font-bold text-white">Three steps. That's it.</h2>
+        <p class="mx-auto mt-3 max-w-md text-gray-400">Deposit USDC, pick a destination, and the bot handles the rest.</p>
       </div>
-      <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="mx-auto mt-12 flex max-w-xl flex-col gap-4">
+        <div class="flex gap-5 rounded-xl border border-gray-800 bg-gray-950/60 p-6">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">1</div>
+          <div>
+            <h4 class="font-semibold text-white">Get your address</h4>
+            <p class="mt-1 text-sm leading-relaxed text-gray-400">Send <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/address</code> to get your deposit wallet. Each user (or group chat) gets a unique address derived automatically.</p>
           </div>
-          <h3 class="text-base font-semibold text-white">Instant Top-ups</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">Fund any address in one command. GiveWei finds the best route, executes the swap from USDC, and delivers tokens in under a minute.</p>
         </div>
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div class="flex gap-5 rounded-xl border border-gray-800 bg-gray-950/60 p-6">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">2</div>
+          <div>
+            <h4 class="font-semibold text-white">Deposit USDC</h4>
+            <p class="mt-1 text-sm leading-relaxed text-gray-400">Send USDC to your address on <strong class="text-gray-300">Base</strong> or <strong class="text-gray-300">Avalanche</strong>. These are the only two source chains — the bot picks the best one at swap time. Check anytime with <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/balance</code>.</p>
           </div>
-          <h3 class="text-base font-semibold text-white">Telegram Native</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">No accounts, no passwords, no browser extensions. Open the bot in Telegram and start funding — in DMs or group chats.</p>
         </div>
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div class="flex gap-5 rounded-xl border border-gray-800 bg-gray-950/60 p-6">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">3</div>
+          <div>
+            <h4 class="font-semibold text-white">Top up anything</h4>
+            <p class="mt-1 text-sm leading-relaxed text-gray-400">Run <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/topup 0xABC... 5 ETH.ETH</code> to swap $5 USDC into ETH and deliver it anywhere. Add a <a href="/docs#routing" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">routing hint</a> to choose your provider.</p>
           </div>
-          <h3 class="text-base font-semibold text-white">Self-Hosted</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">Run your own instance with your own keys. Single-user or multi-user. Fully open source — your keys, your rules.</p>
-        </div>
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <h3 class="text-base font-semibold text-white">Team Wallets</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">Add the bot to a group chat and share a single wallet. Perfect for dev teams funding test addresses without passing keys around.</p>
-        </div>
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </div>
-          <h3 class="text-base font-semibold text-white">Live Tracking</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">Every swap is tracked in real-time. Get notified the moment your top-up completes, or check status anytime.</p>
-        </div>
-        <div class="group rounded-xl border border-gray-800 bg-gray-950/60 p-6 transition hover:border-gray-700 hover:-translate-y-0.5">
-          <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          </div>
-          <h3 class="text-base font-semibold text-white">Multi-Chain</h3>
-          <p class="mt-2 text-sm leading-relaxed text-gray-400">Swap to any supported asset across Avalanche, Base, Ethereum, Bitcoin, and more. One bot, every chain.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- How It Works -->
-  <section id="how-it-works" class="py-20">
+  <!-- Providers -->
+  <section class="py-20">
     <div class="mx-auto max-w-6xl px-6">
       <div class="text-center">
-        <h2 class="text-3xl font-bold text-white">Three commands. That's it.</h2>
-        <p class="mx-auto mt-3 max-w-md text-gray-400">No setup wizards, no configuration files. Just start chatting.</p>
+        <h2 class="text-3xl font-bold text-white">Two providers, one command</h2>
+        <p class="mx-auto mt-3 max-w-lg text-gray-400">The bot queries both and picks the best price — or you can force a specific one with a <a href="/docs#routing" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">routing hint</a>.</p>
       </div>
-      <div class="mx-auto mt-12 flex max-w-xl flex-col gap-4">
-        <div class="flex gap-5 rounded-xl border border-gray-800 bg-surface p-6">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">1</div>
-          <div>
-            <h4 class="font-semibold text-white">Get your address</h4>
-            <p class="mt-1 text-sm leading-relaxed text-gray-400">Send <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/address</code> to get your unique deposit address. Your wallet is derived automatically — no seed phrase to manage.</p>
-          </div>
+      <div class="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border border-gray-800 bg-surface p-6">
+          <h3 class="text-base font-semibold text-white">Thorchain</h3>
+          <span class="text-xs text-gray-500">DEX &middot; Non-custodial</span>
+          <p class="mt-3 text-sm leading-relaxed text-gray-400">Cross-chain liquidity protocol. Swaps happen on-chain — your USDC goes directly from your wallet to the protocol. No intermediaries.</p>
         </div>
-        <div class="flex gap-5 rounded-xl border border-gray-800 bg-surface p-6">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">2</div>
-          <div>
-            <h4 class="font-semibold text-white">Deposit USDC</h4>
-            <p class="mt-1 text-sm leading-relaxed text-gray-400">Send USDC on Avalanche or Base to your address. Check your balance anytime with <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/balance</code>.</p>
-          </div>
-        </div>
-        <div class="flex gap-5 rounded-xl border border-gray-800 bg-surface p-6">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 text-sm font-bold text-white">3</div>
-          <div>
-            <h4 class="font-semibold text-white">Top up anything</h4>
-            <p class="mt-1 text-sm leading-relaxed text-gray-400">Run <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/topup 0xABC... 5 ETH.ETH</code> to swap $5 of USDC into ETH and deliver it to any address. Done.</p>
-          </div>
+        <div class="rounded-xl border border-gray-800 bg-surface p-6">
+          <h3 class="text-base font-semibold text-white">SimpleSwap</h3>
+          <span class="text-xs text-gray-500">Private &middot; Custodial</span>
+          <p class="mt-3 text-sm leading-relaxed text-gray-400">Exchange aggregator supporting 29+ assets. Custodial — USDC is sent to a deposit address and SimpleSwap delivers the output to your destination.</p>
         </div>
       </div>
     </div>
@@ -201,6 +173,10 @@
         <a href="https://t.me/give_wei_bot" target="_blank" rel="noopener"
            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition">
           Open in Telegram
+        </a>
+        <a href="/docs"
+           class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-300 hover:border-blue-500 hover:text-white transition">
+          Read the Docs
         </a>
         <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener"
            class="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-300 hover:border-blue-500 hover:text-white transition">
