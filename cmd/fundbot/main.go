@@ -15,6 +15,7 @@ import (
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/nearintents"
+	"github.com/RaghavSood/fundbot/resolver"
 	"github.com/RaghavSood/fundbot/server"
 	"github.com/RaghavSood/fundbot/simpleswap"
 	"github.com/RaghavSood/fundbot/swaps"
@@ -73,8 +74,15 @@ func main() {
 	cowClient := cowswap.NewClient(rpcClients)
 	log.Println("CoWSwap client enabled for gas refills")
 
+	// Initialize token resolver
+	var res *resolver.Resolver
+	if cfg.CoinGeckoAPIKey != "" {
+		res = resolver.New(cfg.CoinGeckoAPIKey, simpleswap.LookupSymbol)
+		log.Println("Token resolver enabled (CoinGecko)")
+	}
+
 	// Create and run bot
-	b, err := bot.New(cfg, database, swapMgr, rpcClients, cowClient)
+	b, err := bot.New(cfg, database, swapMgr, rpcClients, cowClient, res)
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)
 	}

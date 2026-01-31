@@ -10,6 +10,7 @@ type Asset struct {
 	Chain           string
 	Symbol          string
 	ContractAddress string // empty for native assets
+	Hints           *ResolvedHints
 }
 
 // ParseAsset parses Thorchain asset notation.
@@ -49,4 +50,11 @@ func (a Asset) String() string {
 // IsNative returns true if the asset is a chain-native asset (no contract address).
 func (a Asset) IsNative() bool {
 	return a.ContractAddress == ""
+}
+
+// ResolvedHints carries provider-specific asset identifiers from dynamic resolution.
+type ResolvedHints struct {
+	ThorchainAsset     string
+	SimpleSwapSymbol   string
+	NearIntentsTokenID string
 }

@@ -48,8 +48,20 @@ func (p *Provider) Category() string {
 	return "private"
 }
 
+func (p *Provider) SupportsAsset(asset swaps.Asset) bool {
+	_, ok := AssetToSymbol(asset)
+	return ok
+}
+
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
-	toSymbol, ok := AssetToSymbol(toAsset)
+	var toSymbol string
+	var ok bool
+	if toAsset.Hints != nil && toAsset.Hints.SimpleSwapSymbol != "" {
+		toSymbol = toAsset.Hints.SimpleSwapSymbol
+		ok = true
+	} else {
+		toSymbol, ok = AssetToSymbol(toAsset)
+	}
 	if !ok {
 		return nil, fmt.Errorf("simpleswap: unsupported target asset %s", toAsset)
 	}

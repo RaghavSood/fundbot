@@ -57,4 +57,7 @@ type Provider interface {
 	// externalID is a provider-specific identifier (ignored by some providers).
 	// Returns "pending", "completed", or "failed".
 	CheckStatus(ctx context.Context, txHash string, externalID string) (string, error)
+
+	// SupportsAsset returns true if the asset is in the provider's static mapping.
+	SupportsAsset(asset Asset) bool
 }
