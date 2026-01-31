@@ -142,9 +142,11 @@ type OrderSubmission struct {
 
 // GasRefillResult holds the result of a gas refill operation.
 type GasRefillResult struct {
-	Chain    string
-	OrderUID string
-	Status   string
+	Chain      string
+	OrderUID   string
+	Status     string
+	SellAmount string // USDC amount in smallest units
+	BuyAmount  string // native token amount in smallest units
 }
 
 // --- Core API methods (reusable for future swap provider) ---
@@ -659,6 +661,19 @@ func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr commo
 		return nil, fmt.Errorf("getting quote: %w", err)
 	}
 
+	// Override expiry to 3 minutes from now for faster retry cycle
+	qr.Quote.ValidTo = uint32(time.Now().Unix() + 180)
+
+	// Apply 1% slippage tolerance to buyAmount so the order fills quickly
+	buyAmt, ok := new(big.Int).SetString(qr.Quote.BuyAmount, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid buyAmount: %s", qr.Quote.BuyAmount)
+	}
+	// Reduce by 1%: buyAmount * 99 / 100
+	buyAmt.Mul(buyAmt, big.NewInt(99))
+	buyAmt.Div(buyAmt, big.NewInt(100))
+	qr.Quote.BuyAmount = buyAmt.String()
+
 	// Sign order
 	sig, err := c.SignOrder(cc, qr, privateKey)
 	if err != nil {
@@ -671,11 +686,13 @@ func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr commo
 		return nil, fmt.Errorf("submitting order: %w", err)
 	}
 
-	log.Printf("CoW gas refill order submitted on %s: %s", cc.NativeSymbol, orderUID)
+	log.Printf("CoW gas refill order submitted on %s: %s (expires in 3m)", cc.NativeSymbol, orderUID)
 
 	return &GasRefillResult{
-		Chain:    chain,
-		OrderUID: orderUID,
-		Status:   "open",
+		Chain:      chain,
+		OrderUID:   orderUID,
+		Status:     "open",
+		SellAmount: qr.Quote.SellAmount,
+		BuyAmount:  qr.Quote.BuyAmount,
 	}, nil
 }
