@@ -57,7 +57,8 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - Supports Base and Avalanche chains (`api.cow.fi/base`, `api.cow.fi/avalanche`)
 - Core methods: `GetQuote()`, `SignOrder()` (EIP-712), `SubmitOrder()`, `CheckOrderStatus()` — all public for reuse
 - Gasless approval via EIP-2612 permit: signs permit off-chain, embeds as CoW pre-hook in appData
-- USDC permit domain: `name="USDC"`, `version="2"`, `chainId`, `verifyingContract=USDC address`
+- USDC permit domain: `name="USD Coin"`, `version="2"`, `chainId`, `verifyingContract=USDC address`
+- Order signing and submission use `feeAmount="0"` — solvers compute fees dynamically
 - If vault relayer allowance sufficient, uses default appData (no hooks); otherwise builds permit pre-hook
 - `RefillGasIfNeeded()`: high-level gas refill — checks threshold, approves, quotes, signs, submits
 - Settlement contract: `0x9008D19f58AAbD9eD0D60971565AA8510560ab41` (same on all chains)

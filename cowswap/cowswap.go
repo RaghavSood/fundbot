@@ -129,7 +129,6 @@ type OrderSubmission struct {
 	BuyAmount         string `json:"buyAmount"`
 	ValidTo           uint32 `json:"validTo"`
 	AppData           string `json:"appData"`
-	AppDataHash       string `json:"appDataHash"`
 	FeeAmount         string `json:"feeAmount"`
 	Kind              string `json:"kind"`
 	PartiallyFillable bool   `json:"partiallyFillable"`
@@ -138,6 +137,7 @@ type OrderSubmission struct {
 	SigningScheme     string `json:"signingScheme"`
 	Signature         string `json:"signature"`
 	From              string `json:"from"`
+	QuoteID           int64  `json:"quoteId,omitempty"`
 }
 
 // GasRefillResult holds the result of a gas refill operation.
@@ -244,7 +244,7 @@ func (c *Client) SignOrder(cc ChainConfig, qr *QuoteResult, privateKey *ecdsa.Pr
 			"buyAmount":         q.BuyAmount,
 			"validTo":           fmt.Sprintf("%d", q.ValidTo),
 			"appData":           q.AppDataHash,
-			"feeAmount":         q.FeeAmount,
+			"feeAmount":         "0",
 			"kind":              q.Kind,
 			"partiallyFillable": q.PartiallyFillable,
 			"sellTokenBalance":  q.SellTokenBalance,
@@ -340,8 +340,7 @@ func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, fr
 		BuyAmount:         q.BuyAmount,
 		ValidTo:           q.ValidTo,
 		AppData:           appDataField,
-		AppDataHash:       q.AppDataHash,
-		FeeAmount:         q.FeeAmount,
+		FeeAmount:         "0",
 		Kind:              q.Kind,
 		PartiallyFillable: q.PartiallyFillable,
 		SellTokenBalance:  q.SellTokenBalance,
@@ -349,6 +348,7 @@ func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, fr
 		SigningScheme:     "eip712",
 		Signature:         signature,
 		From:              from.Hex(),
+		QuoteID:           qr.ID,
 	}
 
 	body, err := json.Marshal(order)
@@ -502,7 +502,7 @@ func (c *Client) getNonce(ctx context.Context, chain string, token common.Addres
 // signPermit signs an EIP-2612 permit for USDC and returns the permit callData
 // to be used as a CoW pre-hook, plus the appData JSON and its hash.
 //
-// USDC uses EIP-2612 with domain: name="USDC", version="2".
+// USDC uses EIP-2612 with domain: name="USD Coin", version="2".
 func (c *Client) signPermit(ctx context.Context, chain string, cc ChainConfig, owner common.Address, privateKey *ecdsa.PrivateKey, amount *big.Int) (string, string, error) {
 	token := common.HexToAddress(cc.USDCAddress)
 	spender := common.HexToAddress(VaultRelayer)
@@ -534,7 +534,7 @@ func (c *Client) signPermit(ctx context.Context, chain string, cc ChainConfig, o
 		},
 		PrimaryType: "Permit",
 		Domain: apitypes.TypedDataDomain{
-			Name:              "USDC",
+			Name:              "USD Coin",
 			Version:           "2",
 			ChainId:           math.NewHexOrDecimal256(cc.ChainID),
 			VerifyingContract: cc.USDCAddress,
