@@ -57,4 +57,5 @@ type ResolvedHints struct {
 	ThorchainAsset     string
 	SimpleSwapSymbol   string
 	NearIntentsTokenID string
+	HoudiniSymbol      string
 }

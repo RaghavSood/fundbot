@@ -34,6 +34,8 @@
                     go-ethereum
                     sqlc
                     goose
+                    python3
+                    sqlite
                   ];
 
                   enterShell = ''

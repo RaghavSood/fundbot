@@ -14,6 +14,7 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
+	"github.com/RaghavSood/fundbot/houdini"
 	"github.com/RaghavSood/fundbot/nearintents"
 	"github.com/RaghavSood/fundbot/resolver"
 	"github.com/RaghavSood/fundbot/server"
@@ -67,6 +68,12 @@ func main() {
 		log.Println("Near Intents provider enabled")
 	}
 
+	if hCfg, ok := cfg.Providers["houdini"]; ok && hCfg.APIKey != "" {
+		hProvider := houdini.NewProvider(hCfg.APIKey, hCfg.APISecret, rpcClients)
+		providers = append(providers, hProvider)
+		log.Println("Houdini Swap provider enabled")
+	}
+
 	// Initialize swap manager
 	swapMgr := swaps.NewManager(rpcClients, thorchain.USDCContracts, providers...)
 
@@ -77,7 +84,7 @@ func main() {
 	// Initialize token resolver
 	var res *resolver.Resolver
 	if cfg.CoinGeckoAPIKey != "" {
-		res = resolver.New(cfg.CoinGeckoAPIKey, simpleswap.LookupSymbol)
+		res = resolver.New(cfg.CoinGeckoAPIKey, simpleswap.LookupSymbol, houdini.LookupSymbol)
 		log.Println("Token resolver enabled (CoinGecko)")
 	}
 

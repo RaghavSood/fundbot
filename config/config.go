@@ -7,7 +7,8 @@ import (
 )
 
 type ProviderConfig struct {
-	APIKey string `json:"api_key"`
+	APIKey    string `json:"api_key"`
+	APISecret string `json:"api_secret"`
 }
 
 type Mode string
