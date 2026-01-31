@@ -129,7 +129,7 @@ func (r *Resolver) matchThorchain(ctx context.Context, asset swaps.Asset, platfo
 }
 
 func (r *Resolver) matchNearIntents(ctx context.Context, asset swaps.Asset, res *Resolution) {
-	tokenID, found, err := r.near.matchToken(ctx, asset.Symbol)
+	tokenID, found, err := r.near.matchToken(ctx, asset.Chain, asset.Symbol)
 	if err != nil {
 		log.Printf("resolver: near intents match error: %v", err)
 		return
