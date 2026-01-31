@@ -1,5 +1,5 @@
 -- name: CountUsers :one
-SELECT COUNT(*) FROM users;
+SELECT (SELECT COUNT(*) FROM users) + (SELECT COUNT(*) FROM chats);
 
 -- name: CountTopups :one
 SELECT COUNT(*) FROM topups;
