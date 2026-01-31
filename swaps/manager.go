@@ -21,10 +21,15 @@ func NewManager(providers ...Provider) *Manager {
 
 // BestQuote queries all providers and returns the quote with the highest expected output.
 // sender is the EVM address that will fund the swap.
-func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float64, destination string, sender common.Address) (*Quote, error) {
+func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float64, destination string, sender common.Address, hint RoutingHint) (*Quote, error) {
+	providers, err := m.filterProviders(hint)
+	if err != nil {
+		return nil, err
+	}
+
 	var best *Quote
 
-	for _, p := range m.providers {
+	for _, p := range providers {
 		quotes, err := p.Quote(ctx, toAsset, usdAmount, destination, sender)
 		if err != nil {
 			log.Printf("provider %s quote error: %v", p.Name(), err)
@@ -44,6 +49,33 @@ func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float6
 	}
 
 	return best, nil
+}
+
+// filterProviders returns the subset of providers matching the routing hint.
+func (m *Manager) filterProviders(hint RoutingHint) ([]Provider, error) {
+	if hint.Type == "" {
+		return m.providers, nil
+	}
+
+	var filtered []Provider
+	for _, p := range m.providers {
+		switch hint.Type {
+		case "provider":
+			if p.Name() == hint.Value {
+				filtered = append(filtered, p)
+			}
+		case "category":
+			if p.Category() == hint.Value {
+				filtered = append(filtered, p)
+			}
+		}
+	}
+
+	if len(filtered) == 0 {
+		return nil, fmt.Errorf("no providers match routing hint %q", hint.Value)
+	}
+
+	return filtered, nil
 }
 
 // ExecuteSwap executes the given quote.

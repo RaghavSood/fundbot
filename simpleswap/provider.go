@@ -44,6 +44,10 @@ func (p *Provider) Name() string {
 	return "simpleswap"
 }
 
+func (p *Provider) Category() string {
+	return "private"
+}
+
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
 	toSymbol, ok := AssetToSymbol(toAsset)
 	if !ok {
