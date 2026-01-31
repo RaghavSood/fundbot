@@ -86,7 +86,8 @@ func (t *Tracker) pollTopups(ctx context.Context) {
 
 		log.Printf("Tracker: %s status = %s", topup.ShortID, status)
 
-		if status == "completed" {
+		switch status {
+		case "completed":
 			if err := t.store.UpdateTopupStatus(ctx, db.UpdateTopupStatusParams{
 				Status: "completed",
 				ID:     topup.ID,
@@ -94,9 +95,18 @@ func (t *Tracker) pollTopups(ctx context.Context) {
 				log.Printf("Tracker: error updating %s: %v", topup.ShortID, err)
 				continue
 			}
-
 			log.Printf("Tracker: topup %s completed", topup.ShortID)
-			t.notifyUser(topup)
+			t.notifyUser(topup, "completed")
+		case "failed":
+			if err := t.store.UpdateTopupStatus(ctx, db.UpdateTopupStatusParams{
+				Status: "failed",
+				ID:     topup.ID,
+			}); err != nil {
+				log.Printf("Tracker: error updating %s: %v", topup.ShortID, err)
+				continue
+			}
+			log.Printf("Tracker: topup %s failed", topup.ShortID)
+			t.notifyUser(topup, "failed")
 		}
 	}
 }
@@ -155,10 +165,19 @@ func (t *Tracker) pollGasRefills(ctx context.Context) {
 	}
 }
 
-func (t *Tracker) notifyUser(topup db.ListPendingTopupsRow) {
+func (t *Tracker) notifyUser(topup db.ListPendingTopupsRow, status string) {
 	explorerURL := t.cfg.ExplorerTxURL(topup.FromChain, topup.TxHash)
-	text := fmt.Sprintf("*Topup %s Complete*\nYour swap has been completed successfully.\nTx: `%s`\n[View on Explorer](%s)",
-		topup.ShortID, topup.TxHash, explorerURL)
+	var text string
+	switch status {
+	case "completed":
+		text = fmt.Sprintf("*Topup %s Complete*\nYour swap has been completed successfully.\nTx: `%s`\n[View on Explorer](%s)",
+			topup.ShortID, topup.TxHash, explorerURL)
+	case "failed":
+		text = fmt.Sprintf("*Topup %s Failed*\nYour swap has failed. Funds may be refunded automatically.\nTx: `%s`\n[View on Explorer](%s)",
+			topup.ShortID, topup.TxHash, explorerURL)
+	default:
+		return
+	}
 
 	// Notify the chat where the topup was initiated; fall back to user DM for legacy topups.
 	chatID := topup.ChatID
