@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// Initialize swap manager
-	swapMgr := swaps.NewManager(providers...)
+	swapMgr := swaps.NewManager(rpcClients, thorchain.USDCContracts, providers...)
 
 	// Initialize CoWSwap client for gas refills
 	cowClient := cowswap.NewClient(rpcClients)
