@@ -278,6 +278,45 @@ func (c *Client) SignOrder(cc ChainConfig, qr *QuoteResult, privateKey *ecdsa.Pr
 	return fmt.Sprintf("0x%x", sig), nil
 }
 
+// RegisterAppData uploads an appData document to the CoW API so that hooks
+// (e.g. EIP-2612 permit pre-hooks) are recognised during order validation.
+// Must be called before SubmitOrder when using custom appData with hooks.
+func (c *Client) RegisterAppData(chain string, appDataHash string, fullAppData string) error {
+	cc, ok := SupportedChains[chain]
+	if !ok {
+		return fmt.Errorf("chain %q not supported by CoW Protocol", chain)
+	}
+
+	payload := struct {
+		FullAppData string `json:"fullAppData"`
+	}{FullAppData: fullAppData}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/app_data/%s", cc.APIBase, appDataHash)
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("app_data API returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
 // SubmitOrder submits a signed order to the CoW Protocol API. Returns the order UID.
 func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, from common.Address) (string, error) {
 	cc, ok := SupportedChains[chain]
@@ -611,6 +650,13 @@ func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr commo
 	qr, err := c.GetQuote(chain, cc.USDCAddress, NativeToken, refillUSDC, addr, addr, appData, appHash)
 	if err != nil {
 		return nil, fmt.Errorf("getting quote: %w", err)
+	}
+
+	// Register appData with CoW API (required for hook validation)
+	if appData != "" {
+		if err := c.RegisterAppData(chain, appHash, appData); err != nil {
+			return nil, fmt.Errorf("registering appData: %w", err)
+		}
 	}
 
 	// Sign order
