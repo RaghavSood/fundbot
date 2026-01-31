@@ -56,15 +56,27 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - Client for CoW Protocol API — currently used for gas refills, designed for future general swap support
 - Supports Base and Avalanche chains (`api.cow.fi/base`, `api.cow.fi/avalanche`)
 - Core methods: `GetQuote()`, `SignOrder()` (EIP-712), `SubmitOrder()`, `CheckOrderStatus()` — all public for reuse
+- `RegisterAppData()` uploads appData JSON to CoW API via `PUT /app_data/{hash}` (kept for general use, not needed for order submission which accepts inline full JSON)
 - Gasless approval via EIP-2612 permit: signs permit off-chain, embeds as CoW pre-hook in appData
-- USDC permit domain: `name="USD Coin"`, `version="2"`, `chainId`, `verifyingContract=USDC address`
-- Order signing and submission use `feeAmount="0"` — solvers compute fees dynamically
 - If vault relayer allowance sufficient, uses default appData (no hooks); otherwise builds permit pre-hook
-- `RefillGasIfNeeded()`: high-level gas refill — checks threshold, approves, quotes, signs, submits
+- `RefillGasIfNeeded()`: high-level gas refill — checks threshold, quotes, signs, submits
 - Settlement contract: `0x9008D19f58AAbD9eD0D60971565AA8510560ab41` (same on all chains)
+- Vault Relayer: `0xC92E8bdf79f0507f65a392b0ab4667716BFE0110` (spender for approvals/permits)
 - Native token buy address: `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`
-- Order signing: EIP-712 with domain `{name: "Gnosis Protocol", version: "v2", chainId, verifyingContract: settlement}`
 - Gas refill triggered by `/balance` command when native balance < ~$1 worth and USDC balance >= $5
+- Test script: `cmd/cowtest/main.go` — standalone USDC→AVAX swap on Avalanche with permit, useful for debugging
+
+#### CoW Protocol API Gotchas
+- **USDC permit domain name**: The on-chain `name()` returns `"USD Coin"`, NOT `"USDC"`. Using the wrong name causes `ecrecover` to recover the wrong address → `"EIP2612: invalid signature"`. Always verify domain params by calling `name()` and `version()` on the token contract.
+- **feeAmount must be "0"**: Both order signing (EIP-712) and submission must use `feeAmount="0"`. Solvers compute fees dynamically. Forwarding the non-zero fee from the quote response causes `"NonZeroFee"` rejection.
+- **appData in order submission**: The `appData` field accepts either the full JSON string or a bytes32 hash. When submitting with permit pre-hooks, send the **full JSON** so the backend auto-registers it and can simulate the hook during validation. The quote API response returns `appData` as the full JSON and `appDataHash` as the bytes32 — use `appDataHash` for EIP-712 signing (it's the `bytes32` type in the Order struct).
+- **Pre-hook validation**: CoW backend simulates pre-hooks via `eth_call` before accepting orders. If the permit signature is invalid, the simulation reverts, allowance stays 0, and the API returns `InsufficientAllowance` — the error is misleading since the real issue is the permit signature.
+- **quoteId**: Include `quoteId` from the quote response in the order submission for better matching.
+
+#### EIP-712 Signing Details
+- **Order signing domain**: `{name: "Gnosis Protocol", version: "v2", chainId, verifyingContract: settlement}`
+- **USDC permit domain**: `{name: "USD Coin", version: "2", chainId, verifyingContract: USDC address}` — both Avalanche and Base use the same name/version
+- **Permit value**: Use max `uint256` so the permit doesn't need to be repeated for subsequent swaps
 
 ### Balance Checking
 - `balances/` package provides `USDCBalance()` and `FetchBalances()` helpers
