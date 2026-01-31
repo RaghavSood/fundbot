@@ -186,12 +186,12 @@ func (p *Provider) CheckStatus(ctx context.Context, txHash string, externalID st
 		return "pending", nil
 	}
 
-	resp, err := p.client.GetExecutionStatus(ctx, externalID)
+	status, err := p.client.GetExecutionStatus(ctx, externalID)
 	if err != nil {
 		return "", fmt.Errorf("nearintents get status: %w", err)
 	}
 
-	switch resp.Status {
+	switch status {
 	case "SUCCESS":
 		return "completed", nil
 	case "FAILED", "REFUNDED":
