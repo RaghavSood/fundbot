@@ -5,18 +5,29 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"log"
+	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/RaghavSood/fundbot/balances"
 )
 
 // Manager orchestrates swap providers and selects the best quote.
 type Manager struct {
-	providers []Provider
+	providers     []Provider
+	rpcClients    map[string]*ethclient.Client
+	usdcContracts map[string]common.Address
 }
 
 // NewManager creates a Manager with the given providers.
-func NewManager(providers ...Provider) *Manager {
-	return &Manager{providers: providers}
+func NewManager(rpcClients map[string]*ethclient.Client, usdcContracts map[string]common.Address, providers ...Provider) *Manager {
+	return &Manager{
+		providers:     providers,
+		rpcClients:    rpcClients,
+		usdcContracts: usdcContracts,
+	}
 }
 
 // BestQuote queries all providers and returns the quote with the highest expected output.
@@ -45,7 +56,7 @@ func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float6
 	}
 
 	if best == nil {
-		return nil, fmt.Errorf("no quotes available for %s", toAsset)
+		return nil, m.noQuotesError(ctx, toAsset, usdAmount, sender)
 	}
 
 	return best, nil
@@ -96,4 +107,44 @@ func (m *Manager) CheckStatus(ctx context.Context, provider, txHash, externalID 
 		}
 	}
 	return "", fmt.Errorf("provider %q not found", provider)
+}
+
+// noQuotesError builds a descriptive error when no quotes are available,
+// checking whether insufficient balance is the cause.
+func (m *Manager) noQuotesError(ctx context.Context, toAsset Asset, usdAmount float64, sender common.Address) error {
+	requiredUSDC := new(big.Int).SetInt64(int64(usdAmount * 1e6))
+
+	var lines []string
+	allInsufficient := true
+	checkedAny := false
+
+	for chain, rpc := range m.rpcClients {
+		usdcAddr, ok := m.usdcContracts[chain]
+		if !ok {
+			continue
+		}
+		bal, err := balances.USDCBalance(ctx, rpc, usdcAddr, sender)
+		if err != nil {
+			log.Printf("noQuotesError: error checking %s balance: %v", chain, err)
+			continue
+		}
+		checkedAny = true
+
+		// Format as human-readable USDC (6 decimals)
+		whole := new(big.Int).Div(bal, big.NewInt(1e6))
+		frac := new(big.Int).Mod(bal, big.NewInt(1e6))
+		balStr := fmt.Sprintf("%d.%06d", whole.Int64(), frac.Int64())
+		lines = append(lines, fmt.Sprintf("  %s: %s USDC", strings.Title(chain), balStr))
+
+		if bal.Cmp(requiredUSDC) >= 0 {
+			allInsufficient = false
+		}
+	}
+
+	if checkedAny && allInsufficient {
+		return fmt.Errorf("insufficient USDC balance for $%.2f swap to %s\nCurrent balances:\n%s",
+			usdAmount, toAsset, strings.Join(lines, "\n"))
+	}
+
+	return fmt.Errorf("no quotes available for %s", toAsset)
 }
