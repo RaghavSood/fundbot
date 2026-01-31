@@ -33,7 +33,7 @@
     <!-- Intro -->
     <h1 class="text-4xl font-extrabold tracking-tight text-white">Documentation</h1>
     <p class="mt-4 text-lg leading-relaxed text-gray-400">
-      GiveWei is a Telegram bot that makes it easy to top up and initialize new crypto addresses with funds. Deposit USDC on Base or Avalanche, then swap to 29+ assets across any supported chain — all from a single Telegram command.
+      GiveWei is a Telegram bot that makes it easy to top up and initialize new crypto addresses with funds. Deposit USDC on Base or Avalanche, then swap to hundreds of assets across any supported chain — all from a single Telegram command. 29+ assets work instantly out of the box, and any other token is automatically looked up and matched against provider liquidity.
     </p>
 
     <!-- How It Works -->
@@ -100,6 +100,10 @@
       <div class="rounded-lg border border-gray-800 bg-surface px-4 py-3">
         <code class="text-gray-300">/quote 0xABC...123 20 SOL.SOL private</code>
         <span class="ml-2 text-gray-500">— Quote using only private/custodial providers</span>
+      </div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-4 py-3">
+        <code class="text-gray-300">/topup 0xABC...123 5 BASE.CBBTC</code>
+        <span class="ml-2 text-gray-500">— Token not built-in; bot looks it up, asks you to confirm, then swaps</span>
       </div>
     </div>
 
@@ -178,7 +182,7 @@
           </div>
         </div>
         <p class="mt-3 text-sm leading-relaxed text-gray-400">
-          Custodial exchange aggregator. The bot creates an exchange via SimpleSwap's API, then sends USDC to a deposit address. SimpleSwap handles the swap and delivers the output. Supports 29+ assets including BTC, ETH, SOL, DOGE, XRP, ADA, DOT, ATOM, and more.
+          Custodial exchange aggregator. The bot creates an exchange via SimpleSwap's API, then sends USDC to a deposit address. SimpleSwap handles the swap and delivers the output. 29+ built-in assets including BTC, ETH, SOL, DOGE, XRP, ADA, DOT, ATOM, and more.
         </p>
       </div>
 
@@ -199,7 +203,7 @@
     <!-- Supported Assets -->
     <h2 class="mt-14 text-2xl font-bold text-white" id="assets">Supported Assets</h2>
     <p class="mt-4 text-sm leading-relaxed text-gray-400">
-      Assets are specified in <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">CHAIN.ASSET</code> format (Thorchain notation). All providers understand this format.
+      Assets are specified in <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">CHAIN.ASSET</code> format (Thorchain notation). The following assets are built-in and swap instantly with no confirmation step:
     </p>
     <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 text-sm">
       <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BTC.BTC</code></div>
@@ -215,7 +219,27 @@
       <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BCH.BCH</code></div>
       <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BNB.BNB</code></div>
     </div>
-    <p class="mt-3 text-xs text-gray-500">And many more — the full list depends on which providers are enabled. ERC-20 tokens on EVM chains use the format <code class="rounded bg-gray-800 px-1 py-0.5 text-xs text-gray-400">CHAIN.SYMBOL-0xContractAddress</code>.</p>
+    <p class="mt-3 text-xs text-gray-500">And many more — the full built-in list depends on which providers are enabled. ERC-20 tokens on EVM chains use the format <code class="rounded bg-gray-800 px-1 py-0.5 text-xs text-gray-400">CHAIN.SYMBOL-0xContractAddress</code>.</p>
+
+    <!-- Dynamic Token Resolution -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="token-discovery">Dynamic Token Discovery</h2>
+    <div class="mt-4 text-sm leading-relaxed text-gray-400 space-y-3">
+      <p>
+        If you request a token that isn't in the built-in list, GiveWei will automatically try to find it. The process works like this:
+      </p>
+      <ol class="ml-5 list-decimal space-y-2">
+        <li>The bot searches <strong class="text-gray-200">CoinGecko</strong> for your token symbol and picks the best match by market cap.</li>
+        <li>It fetches the token's contract addresses across chains and matches them against <strong class="text-gray-200">Thorchain liquidity pools</strong>, <strong class="text-gray-200">Near Intents token list</strong>, and the <strong class="text-gray-200">SimpleSwap</strong> static catalog.</li>
+        <li>If at least one provider supports the token, the bot shows you the resolved token name, contract address, and available providers.</li>
+        <li>You tap <strong class="text-gray-200">Confirm</strong> to proceed — or <strong class="text-gray-200">Cancel</strong> if it's not the right token.</li>
+      </ol>
+      <p>
+        This means you can swap tokens like <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">BASE.CBBTC</code>, <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">ETH.LINK</code>, or <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">ETH.UNI</code> — even though they're not in the built-in list — as long as a provider has liquidity for them.
+      </p>
+      <p class="text-xs text-gray-500">
+        CoinGecko results are cached for 1 hour and provider token lists for 10 minutes. Symbol matching is case-insensitive. The confirmation step has a 5-minute expiry.
+      </p>
+    </div>
 
     <!-- Source Chains -->
     <h2 class="mt-14 text-2xl font-bold text-white" id="source-chains">Source Chains</h2>
