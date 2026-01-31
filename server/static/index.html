@@ -39,7 +39,7 @@
         <span class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">straight from Telegram</span>
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-        Initialize new addresses, refill gas, or send tokens to any chain — one command, no extensions. Deposit USDC on Base or Avalanche and GiveWei swaps it to hundreds of assets via Thorchain, SimpleSwap, or Near Intents — with automatic token discovery for anything not in the built-in list.
+        Initialize new addresses, refill gas, or send tokens to any chain — one command, no extensions. Deposit USDC on Base or Avalanche and GiveWei swaps it to hundreds of assets via Thorchain, SimpleSwap, Near Intents, or Houdini Swap — with automatic token discovery for anything not in the built-in list.
       </p>
       <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
         <a href="https://t.me/give_wei_bot" target="_blank" rel="noopener"
@@ -146,10 +146,10 @@
   <section class="py-20">
     <div class="mx-auto max-w-6xl px-6">
       <div class="text-center">
-        <h2 class="text-3xl font-bold text-white">Three providers, one command</h2>
+        <h2 class="text-3xl font-bold text-white">Four providers, one command</h2>
         <p class="mx-auto mt-3 max-w-lg text-gray-400">The bot queries all providers and picks the best price — or you can force a specific one with a <a href="/docs#routing" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">routing hint</a>.</p>
       </div>
-      <div class="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
+      <div class="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border border-gray-800 bg-surface p-6">
           <h3 class="text-base font-semibold text-white">Thorchain</h3>
           <span class="text-xs text-gray-500">DEX &middot; Non-custodial</span>
@@ -164,6 +164,11 @@
           <h3 class="text-base font-semibold text-white">Near Intents</h3>
           <span class="text-xs text-gray-500">DEX &middot; Intent-based</span>
           <p class="mt-3 text-sm leading-relaxed text-gray-400">Intent-based cross-chain swaps via the NEAR protocol. USDC is deposited to a one-time address and solvers compete to fill your order at the best rate.</p>
+        </div>
+        <div class="rounded-xl border border-gray-800 bg-surface p-6">
+          <h3 class="text-base font-semibold text-white">Houdini Swap</h3>
+          <span class="text-xs text-gray-500">Private &middot; Custodial</span>
+          <p class="mt-3 text-sm leading-relaxed text-gray-400">Exchange aggregator with CEX routing. USDC is sent to a deposit address and Houdini handles the swap via its network of exchange partners.</p>
         </div>
       </div>
     </div>

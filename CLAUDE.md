@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-FundBot (GiveWei) — Telegram bot for funding crypto addresses via swap providers (Thorchain, SimpleSwap). Sources USDC from Avalanche and Base EVM chains, swaps to 29+ target assets. BIP39 mnemonic-based HD wallet derivation. Two modes: single (shared wallet) and multi (per-user + per-group wallets). Web dashboard with admin panel using Tailwind CSS v4.
+FundBot (GiveWei) — Telegram bot for funding crypto addresses via swap providers (Thorchain, SimpleSwap, Near Intents, Houdini Swap). Sources USDC from Avalanche and Base EVM chains, swaps to 29+ target assets. BIP39 mnemonic-based HD wallet derivation. Two modes: single (shared wallet) and multi (per-user + per-group wallets). Web dashboard with admin panel using Tailwind CSS v4.
 
 ## Build & Run
 
@@ -33,8 +33,8 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 
 ### Swap Providers
 - **Provider interface** (`swaps/provider.go`): `Quote()`, `Execute()`, `CheckStatus()`
-- `Execute()` returns `ExecuteResult{TxHash, ExternalID}` — ExternalID is for provider-specific tracking (e.g. SimpleSwap exchange ID)
-- `CheckStatus()` accepts `externalID` param — Thorchain ignores it, SimpleSwap uses it to poll exchange status
+- `Execute()` returns `ExecuteResult{TxHash, ExternalID}` — ExternalID is for provider-specific tracking (e.g. SimpleSwap exchange ID, Houdini houdiniId)
+- `CheckStatus()` accepts `externalID` param — Thorchain ignores it, SimpleSwap/Houdini use it to poll exchange status
 - `Quote()` accepts `sender` address to check USDC balance per-chain before quoting — only chains with sufficient balance produce quotes
 - **Manager** (`swaps/manager.go`): queries all providers, returns best quote by `ExpectedOutputRaw`
 
@@ -51,6 +51,16 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - **Not available**: kuji (Kujira). **Note**: cro maps to ERC20 on ETH, not native Cronos.
 - Config: `"providers": {"simpleswap": {"api_key": "..."}}` — nested under `providers` key
 - Source USDC symbols: `usdcavaxc` (Avalanche), `usdcbase` (Base)
+
+### Houdini Swap Provider (`houdini/`)
+- Custodial exchange model (CEX routes only): create exchange via API → get deposit address → plain ERC20 transfer of USDC
+- Status tracking via Houdini houdiniId (stored in `topups.external_id` column)
+- Static asset mapping in `houdini/mapping.go` — maps Thorchain-notation assets (e.g. `BTC.BTC`) to Houdini token IDs (e.g. `BTC`)
+- Authentication: `Authorization: ApiKey:ApiSecret` header
+- API base URL: `https://api-partner.houdiniswap.com`
+- Numeric status codes: 0=waiting, 1=confirming, 2=exchanging, 3=sending, 4=completed, 5+=failed
+- Config: `"providers": {"houdini": {"api_key": "...", "api_secret": "..."}}` — nested under `providers` key
+- Source USDC symbols: `USDCAVAXC` (Avalanche), `USDCBASE` (Base)
 
 ### CoWSwap (`cowswap/`)
 - Client for CoW Protocol API — currently used for gas refills, designed for future general swap support

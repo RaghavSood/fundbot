@@ -148,9 +148,14 @@
             <td class="py-3 text-gray-400">Only use DEX providers (Thorchain and Near Intents). Non-custodial.</td>
           </tr>
           <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">houdini</code></td>
+            <td class="py-3 pr-4 text-gray-500">provider</td>
+            <td class="py-3 text-gray-400">Force Houdini Swap. Fails if the pair isn't supported.</td>
+          </tr>
+          <tr>
             <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">private</code></td>
             <td class="py-3 pr-4 text-gray-500">category</td>
-            <td class="py-3 text-gray-400">Only use private/custodial providers (currently SimpleSwap).</td>
+            <td class="py-3 text-gray-400">Only use private/custodial providers (SimpleSwap and Houdini Swap).</td>
           </tr>
         </tbody>
       </table>
@@ -198,6 +203,19 @@
           Intent-based cross-chain swaps powered by the NEAR protocol. The bot requests a quote via the 1Click API, deposits USDC to a one-time address, and solvers compete to fill the order at the best rate. Supports BTC, ETH, SOL, AVAX, and 10+ other assets. Track swaps at <a href="https://explorer.near-intents.org/" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">explorer.near-intents.org</a>.
         </p>
       </div>
+
+      <div class="rounded-xl border border-gray-800 bg-surface p-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 text-sm font-bold">HS</div>
+          <div>
+            <h3 class="font-semibold text-white">Houdini Swap</h3>
+            <span class="text-xs text-gray-500">Private &middot; Custodial</span>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-gray-400">
+          Custodial exchange aggregator with CEX routing. The bot creates an exchange via Houdini's partner API, then sends USDC to a deposit address. Houdini routes the swap through its network of exchange partners and delivers the output. Supports BTC, ETH, SOL, AVAX, ADA, DOT, DOGE, and 20+ other assets.
+        </p>
+      </div>
     </div>
 
     <!-- Supported Assets -->
@@ -229,7 +247,7 @@
       </p>
       <ol class="ml-5 list-decimal space-y-2">
         <li>The bot searches <strong class="text-gray-200">CoinGecko</strong> for your token symbol and picks the best match by market cap.</li>
-        <li>It fetches the token's contract addresses across chains and matches them against <strong class="text-gray-200">Thorchain liquidity pools</strong>, <strong class="text-gray-200">Near Intents token list</strong>, and the <strong class="text-gray-200">SimpleSwap</strong> static catalog.</li>
+        <li>It fetches the token's contract addresses across chains and matches them against <strong class="text-gray-200">Thorchain liquidity pools</strong>, <strong class="text-gray-200">Near Intents token list</strong>, the <strong class="text-gray-200">SimpleSwap</strong> static catalog, and <strong class="text-gray-200">Houdini Swap</strong>.</li>
         <li>If at least one provider supports the token, the bot shows you the resolved token name, contract address, and available providers.</li>
         <li>You tap <strong class="text-gray-200">Confirm</strong> to proceed — or <strong class="text-gray-200">Cancel</strong> if it's not the right token.</li>
       </ol>
