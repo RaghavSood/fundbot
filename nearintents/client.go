@@ -2,7 +2,9 @@ package nearintents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 
 	oneclick "github.com/defuse-protocol/one-click-sdk-go"
 )
@@ -46,11 +48,35 @@ func (c *Client) SubmitDepositTx(ctx context.Context, txHash, depositAddress str
 	return nil
 }
 
+// executionStatusResponse is a minimal struct for parsing the status endpoint response,
+// bypassing the SDK's strict model validation which rejects valid API responses.
+type executionStatusResponse struct {
+	Status string `json:"status"`
+}
+
 // GetExecutionStatus checks the status of a swap by deposit address.
-func (c *Client) GetExecutionStatus(ctx context.Context, depositAddress string) (*oneclick.GetExecutionStatusResponse, error) {
-	resp, _, err := c.api.OneClickAPI.GetExecutionStatus(c.authCtx(ctx)).DepositAddress(depositAddress).Execute()
+// Uses direct HTTP instead of the SDK to avoid deserialization errors from strict model validation.
+func (c *Client) GetExecutionStatus(ctx context.Context, depositAddress string) (string, error) {
+	url := fmt.Sprintf("https://1click.chaindefuser.com/v0/status?depositAddress=%s", depositAddress)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("nearintents GetExecutionStatus: %w", err)
+		return "", fmt.Errorf("nearintents GetExecutionStatus: %w", err)
 	}
-	return resp, nil
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("nearintents GetExecutionStatus: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("nearintents GetExecutionStatus: HTTP %d", resp.StatusCode)
+	}
+
+	var result executionStatusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("nearintents GetExecutionStatus: %w", err)
+	}
+	return result.Status, nil
 }
