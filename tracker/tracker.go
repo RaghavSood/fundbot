@@ -182,14 +182,16 @@ func (t *Tracker) notifyGasRefill(refill db.GasRefill, status string) {
 		symbol = "ETH"
 	}
 
+	explorerURL := fmt.Sprintf("https://explorer.cow.fi/orders/%s", refill.OrderUid)
+
 	var text string
 	switch status {
 	case "fulfilled":
-		text = fmt.Sprintf("Gas refill on %s completed. USDC → %s swap filled.", symbol, symbol)
+		text = fmt.Sprintf("Gas refill on %s completed. USDC → %s swap filled.\n[View Order](%s)", symbol, symbol, explorerURL)
 	case "expired":
-		text = fmt.Sprintf("Gas refill order on %s expired unfilled. It will be retried next time you check /balance.", symbol)
+		text = fmt.Sprintf("Gas refill order on %s expired unfilled. It will be retried next time you check /balance.\n[View Order](%s)", symbol, explorerURL)
 	case "cancelled":
-		text = fmt.Sprintf("Gas refill order on %s was cancelled. It will be retried next time you check /balance.", symbol)
+		text = fmt.Sprintf("Gas refill order on %s was cancelled. It will be retried next time you check /balance.\n[View Order](%s)", symbol, explorerURL)
 	}
 
 	chatID := refill.ChatID
@@ -201,6 +203,8 @@ func (t *Tracker) notifyGasRefill(refill db.GasRefill, status string) {
 	}
 
 	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "Markdown"
+	msg.DisableWebPagePreview = true
 	if _, err := t.botAPI.Send(msg); err != nil {
 		log.Printf("Tracker: error notifying gas refill to %d: %v", chatID, err)
 	}

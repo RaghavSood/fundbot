@@ -205,7 +205,7 @@ func (b *Bot) handleBalance(msg *tgbotapi.Message) {
 				log.Printf("Error storing gas refill record: %v", err)
 			}
 
-			b.reply(msg, fmt.Sprintf("Low %s balance detected. Swapping $5 USDC → %s via CoWSwap (3m expiry).\nOrder: `%s`",
+			b.reply(msg, fmt.Sprintf("Low %s balance detected. Swapping $5 USDC → %s via CoWSwap (3m expiry).\n[View Order](https://explorer.cow.fi/orders/%s)",
 				nativeSymbol(bal.Chain), nativeSymbol(bal.Chain), result.OrderUID))
 		}
 	}
