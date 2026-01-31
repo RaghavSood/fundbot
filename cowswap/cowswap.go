@@ -1,12 +1,16 @@
 // Package cowswap provides a client for the CoW Protocol (CoWSwap) API.
 // Currently used for gas refills (USDC → native token), but designed to
 // support general same-chain and cross-chain swaps in the future.
+//
+// Approvals use EIP-2612 permit signatures (gasless) embedded as CoW pre-hooks,
+// so orders can be placed even with zero native token balance.
 package cowswap
 
 import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -34,8 +37,12 @@ const (
 	// NativeToken is the placeholder address for the chain's native gas token.
 	NativeToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 
-	appDataJSON = `{"version":"1.3.0","metadata":{}}`
-	appDataHash = "0xa872cd1c41362821123e195e2dc6a3f19502a451e1fb2a1f861131526e98fdc7"
+	// Default appData (no hooks) and its keccak256 hash.
+	defaultAppDataJSON = `{"version":"1.3.0","metadata":{}}`
+	defaultAppDataHash = "0xa872cd1c41362821123e195e2dc6a3f19502a451e1fb2a1f861131526e98fdc7"
+
+	// permitGasLimit is the gas limit for the permit pre-hook.
+	permitGasLimit = "80000"
 )
 
 // ChainConfig holds chain-specific CoW Protocol configuration.
@@ -143,10 +150,16 @@ type GasRefillResult struct {
 // --- Core API methods (reusable for future swap provider) ---
 
 // GetQuote requests a quote from the CoW Protocol API.
-func (c *Client) GetQuote(chain string, sellToken, buyToken string, sellAmount *big.Int, from common.Address, receiver common.Address) (*QuoteResult, error) {
+// appData/appDataHash can be empty to use defaults (no hooks).
+func (c *Client) GetQuote(chain string, sellToken, buyToken string, sellAmount *big.Int, from common.Address, receiver common.Address, appData, appDataHashHex string) (*QuoteResult, error) {
 	cc, ok := SupportedChains[chain]
 	if !ok {
 		return nil, fmt.Errorf("chain %q not supported by CoW Protocol", chain)
+	}
+
+	if appData == "" {
+		appData = defaultAppDataJSON
+		appDataHashHex = defaultAppDataHash
 	}
 
 	req := QuoteRequest{
@@ -156,8 +169,8 @@ func (c *Client) GetQuote(chain string, sellToken, buyToken string, sellAmount *
 		SellAmountBeforeFee: sellAmount.String(),
 		Kind:                "sell",
 		From:                from.Hex(),
-		AppData:             appDataJSON,
-		AppDataHash:         appDataHash,
+		AppData:             appData,
+		AppDataHash:         appDataHashHex,
 		SigningScheme:       "eip712",
 	}
 
@@ -350,110 +363,213 @@ func (c *Client) CheckOrderStatus(chain string, orderUID string) (string, error)
 	return result.Status, nil
 }
 
-// --- ERC20 approval ---
+// --- EIP-2612 permit (gasless approval) ---
 
 var erc20ABI abi.ABI
+var permitABI abi.ABI
 
 func init() {
 	var err error
-	erc20ABI, err = abi.JSON(strings.NewReader(`[{"inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`))
+	erc20ABI, err = abi.JSON(strings.NewReader(`[{"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"name":"owner","type":"address"}],"name":"nonces","outputs":[{"name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`))
+	if err != nil {
+		panic(err)
+	}
+	permitABI, err = abi.JSON(strings.NewReader(`[{"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"},{"name":"value","type":"uint256"},{"name":"deadline","type":"uint256"},{"name":"v","type":"uint8"},{"name":"r","type":"bytes32"},{"name":"s","type":"bytes32"}],"name":"permit","outputs":[],"stateMutability":"nonpayable","type":"function"}]`))
 	if err != nil {
 		panic(err)
 	}
 }
 
-// EnsureApproval checks the current allowance of sellToken to the vault relayer
-// and submits a max-approval transaction if insufficient. Waits for confirmation.
-func (c *Client) EnsureApproval(ctx context.Context, chain string, sellToken common.Address, addr common.Address, privateKey *ecdsa.PrivateKey) error {
-	cc, ok := SupportedChains[chain]
-	if !ok {
-		return fmt.Errorf("chain %q not supported", chain)
-	}
+// permitHook represents a CoW pre-hook for an EIP-2612 permit call.
+type permitHook struct {
+	Target   string `json:"target"`
+	CallData string `json:"callData"`
+	GasLimit string `json:"gasLimit"`
+}
 
+// appDataDoc is the appData JSON document structure.
+type appDataDoc struct {
+	Version  string          `json:"version"`
+	Metadata appDataMetadata `json:"metadata"`
+}
+
+type appDataMetadata struct {
+	Hooks *appDataHooks `json:"hooks,omitempty"`
+}
+
+type appDataHooks struct {
+	Pre  []permitHook `json:"pre"`
+	Post []struct{}   `json:"post,omitempty"`
+}
+
+// buildAppDataHash computes keccak256 of the appData JSON string.
+func buildAppDataHash(appDataJSON string) string {
+	hash := crypto.Keccak256Hash([]byte(appDataJSON))
+	return "0x" + hex.EncodeToString(hash.Bytes())
+}
+
+// needsPermit checks if the vault relayer allowance is insufficient for the given amount.
+func (c *Client) needsPermit(ctx context.Context, chain string, sellToken common.Address, owner common.Address, amount *big.Int) (bool, error) {
 	rpc, ok := c.rpcClients[chain]
 	if !ok {
-		return fmt.Errorf("no RPC client for chain %s", chain)
+		return false, fmt.Errorf("no RPC client for chain %s", chain)
 	}
 
-	relayer := common.HexToAddress(VaultRelayer)
-
-	// Check current allowance
-	data, err := erc20ABI.Pack("allowance", addr, relayer)
+	data, err := erc20ABI.Pack("allowance", owner, common.HexToAddress(VaultRelayer))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	output, err := rpc.CallContract(ctx, ethereum.CallMsg{To: &sellToken, Data: data}, nil)
 	if err != nil {
-		return fmt.Errorf("checking allowance: %w", err)
+		return false, fmt.Errorf("checking allowance: %w", err)
 	}
 
 	allowance := new(big.Int).SetBytes(output)
-	// Skip if allowance >= 1000 USDC (1e9 smallest units)
-	if allowance.Cmp(big.NewInt(1e9)) >= 0 {
-		return nil
+	return allowance.Cmp(amount) < 0, nil
+}
+
+// getNonce reads the current EIP-2612 nonce for the owner on the token.
+func (c *Client) getNonce(ctx context.Context, chain string, token common.Address, owner common.Address) (*big.Int, error) {
+	rpc, ok := c.rpcClients[chain]
+	if !ok {
+		return nil, fmt.Errorf("no RPC client for chain %s", chain)
 	}
 
-	log.Printf("Approving %s to CoW vault relayer on %s", sellToken.Hex(), cc.NativeSymbol)
-
-	maxApproval := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
-	approveData, err := erc20ABI.Pack("approve", relayer, maxApproval)
+	data, err := erc20ABI.Pack("nonces", owner)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	chainID := big.NewInt(cc.ChainID)
-	nonce, err := rpc.PendingNonceAt(ctx, addr)
+	output, err := rpc.CallContract(ctx, ethereum.CallMsg{To: &token, Data: data}, nil)
 	if err != nil {
-		return fmt.Errorf("getting nonce: %w", err)
+		return nil, fmt.Errorf("reading nonce: %w", err)
 	}
 
-	gasPrice, err := rpc.SuggestGasPrice(ctx)
+	if len(output) < 32 {
+		return big.NewInt(0), nil
+	}
+
+	return new(big.Int).SetBytes(output), nil
+}
+
+// signPermit signs an EIP-2612 permit for USDC and returns the permit callData
+// to be used as a CoW pre-hook, plus the appData JSON and its hash.
+//
+// USDC uses EIP-2612 with domain: name="USDC", version="2".
+func (c *Client) signPermit(ctx context.Context, chain string, cc ChainConfig, owner common.Address, privateKey *ecdsa.PrivateKey, amount *big.Int) (string, string, error) {
+	token := common.HexToAddress(cc.USDCAddress)
+	spender := common.HexToAddress(VaultRelayer)
+
+	nonce, err := c.getNonce(ctx, chain, token, owner)
 	if err != nil {
-		return fmt.Errorf("getting gas price: %w", err)
+		return "", "", fmt.Errorf("getting permit nonce: %w", err)
 	}
 
-	gas, err := rpc.EstimateGas(ctx, ethereum.CallMsg{
-		From: addr,
-		To:   &sellToken,
-		Data: approveData,
-	})
+	// Deadline: 30 minutes from now
+	deadline := big.NewInt(time.Now().Unix() + 1800)
+
+	// Sign EIP-712 permit
+	typedData := apitypes.TypedData{
+		Types: apitypes.Types{
+			"EIP712Domain": {
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+			"Permit": {
+				{Name: "owner", Type: "address"},
+				{Name: "spender", Type: "address"},
+				{Name: "value", Type: "uint256"},
+				{Name: "nonce", Type: "uint256"},
+				{Name: "deadline", Type: "uint256"},
+			},
+		},
+		PrimaryType: "Permit",
+		Domain: apitypes.TypedDataDomain{
+			Name:              "USDC",
+			Version:           "2",
+			ChainId:           math.NewHexOrDecimal256(cc.ChainID),
+			VerifyingContract: cc.USDCAddress,
+		},
+		Message: apitypes.TypedDataMessage{
+			"owner":    owner.Hex(),
+			"spender":  spender.Hex(),
+			"value":    amount.String(),
+			"nonce":    nonce.String(),
+			"deadline": deadline.String(),
+		},
+	}
+
+	domainSep, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	if err != nil {
-		return fmt.Errorf("estimating gas: %w", err)
+		return "", "", fmt.Errorf("hashing permit domain: %w", err)
 	}
 
-	tx := types.NewTransaction(nonce, sellToken, big.NewInt(0), gas, gasPrice, approveData)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	msgHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	if err != nil {
-		return fmt.Errorf("signing approval tx: %w", err)
+		return "", "", fmt.Errorf("hashing permit message: %w", err)
 	}
 
-	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
-		return fmt.Errorf("sending approval tx: %w", err)
+	rawData := fmt.Sprintf("\x19\x01%s%s", string(domainSep), string(msgHash))
+	digest := crypto.Keccak256Hash([]byte(rawData))
+
+	sig, err := crypto.Sign(digest.Bytes(), privateKey)
+	if err != nil {
+		return "", "", fmt.Errorf("signing permit: %w", err)
 	}
 
-	log.Printf("Approval tx sent: %s", signedTx.Hash().Hex())
-
-	// Wait for confirmation (up to 60s)
-	for i := 0; i < 30; i++ {
-		time.Sleep(2 * time.Second)
-		receipt, err := rpc.TransactionReceipt(ctx, signedTx.Hash())
-		if err != nil {
-			continue
-		}
-		if receipt.Status == 1 {
-			log.Printf("Approval confirmed: %s", signedTx.Hash().Hex())
-			return nil
-		}
-		return fmt.Errorf("approval tx reverted: %s", signedTx.Hash().Hex())
+	// Extract r, s, v
+	r := [32]byte{}
+	s := [32]byte{}
+	copy(r[:], sig[:32])
+	copy(s[:], sig[32:64])
+	v := sig[64]
+	if v < 27 {
+		v += 27
 	}
 
-	return fmt.Errorf("approval tx not confirmed after 60s: %s", signedTx.Hash().Hex())
+	// ABI-encode the permit() call
+	callData, err := permitABI.Pack("permit", owner, spender, amount, deadline, v, r, s)
+	if err != nil {
+		return "", "", fmt.Errorf("encoding permit callData: %w", err)
+	}
+
+	// Build appData with permit pre-hook
+	doc := appDataDoc{
+		Version: "1.3.0",
+		Metadata: appDataMetadata{
+			Hooks: &appDataHooks{
+				Pre: []permitHook{
+					{
+						Target:   cc.USDCAddress,
+						CallData: "0x" + hex.EncodeToString(callData),
+						GasLimit: permitGasLimit,
+					},
+				},
+			},
+		},
+	}
+
+	appJSON, err := json.Marshal(doc)
+	if err != nil {
+		return "", "", fmt.Errorf("marshaling appData: %w", err)
+	}
+
+	appJSONStr := string(appJSON)
+	appHash := buildAppDataHash(appJSONStr)
+
+	log.Printf("Built permit pre-hook for %s on %s (nonce=%s, deadline=%s)",
+		owner.Hex(), cc.NativeSymbol, nonce.String(), deadline.String())
+
+	return appJSONStr, appHash, nil
 }
 
 // --- Gas refill (high-level) ---
 
 // RefillGasIfNeeded checks if the wallet needs gas on a chain and submits a CoW swap if so.
+// Uses EIP-2612 permit for gasless approval when the vault relayer allowance is insufficient.
 // Returns nil result if no refill was needed or conditions weren't met.
 func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr common.Address, privateKey *ecdsa.PrivateKey, nativeBalance *big.Int, usdcBalance *big.Int, minNativeWei *big.Int, refillUSDC *big.Int) (*GasRefillResult, error) {
 	cc, ok := SupportedChains[chain]
@@ -472,26 +588,38 @@ func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr commo
 	log.Printf("Gas refill needed on %s for %s: native=%s, threshold=%s",
 		chain, addr.Hex(), nativeBalance.String(), minNativeWei.String())
 
-	usdcAddr := common.HexToAddress(cc.USDCAddress)
+	sellToken := common.HexToAddress(cc.USDCAddress)
 
-	// Ensure approval
-	if err := c.EnsureApproval(ctx, chain, usdcAddr, addr, privateKey); err != nil {
-		return nil, fmt.Errorf("ensuring approval: %w", err)
+	// Check if we need a permit (allowance < refillUSDC)
+	var appData, appHash string
+	needs, err := c.needsPermit(ctx, chain, sellToken, addr, refillUSDC)
+	if err != nil {
+		return nil, fmt.Errorf("checking permit need: %w", err)
 	}
 
-	// Get quote
-	qr, err := c.GetQuote(chain, cc.USDCAddress, NativeToken, refillUSDC, addr, addr)
+	if needs {
+		// Use max uint256 for permit value so we don't need to permit again next time
+		maxValue := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
+		appData, appHash, err = c.signPermit(ctx, chain, cc, addr, privateKey, maxValue)
+		if err != nil {
+			return nil, fmt.Errorf("signing permit: %w", err)
+		}
+	}
+	// If no permit needed, appData/appHash are empty strings → GetQuote uses defaults
+
+	// Get quote (with permit hook appData if needed)
+	qr, err := c.GetQuote(chain, cc.USDCAddress, NativeToken, refillUSDC, addr, addr, appData, appHash)
 	if err != nil {
 		return nil, fmt.Errorf("getting quote: %w", err)
 	}
 
-	// Sign
+	// Sign order
 	sig, err := c.SignOrder(cc, qr, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("signing order: %w", err)
 	}
 
-	// Submit
+	// Submit order
 	orderUID, err := c.SubmitOrder(chain, qr, sig, addr)
 	if err != nil {
 		return nil, fmt.Errorf("submitting order: %w", err)
