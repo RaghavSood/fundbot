@@ -319,11 +319,12 @@ func (b *Bot) handleAddress(msg *tgbotapi.Message) {
 
 // validHints maps accepted routing hint strings to their type and normalized value.
 var validHints = map[string]swaps.RoutingHint{
-	"thorchain":   {Type: "provider", Value: "thorchain"},
-	"simpleswap":  {Type: "provider", Value: "simpleswap"},
-	"near": {Type: "provider", Value: "nearintents"},
-	"dex":         {Type: "category", Value: "dex"},
-	"private":     {Type: "category", Value: "private"},
+	"thorchain":  {Type: "provider", Value: "thorchain"},
+	"simpleswap": {Type: "provider", Value: "simpleswap"},
+	"near":       {Type: "provider", Value: "nearintents"},
+	"houdini":    {Type: "provider", Value: "houdini"},
+	"dex":        {Type: "category", Value: "dex"},
+	"private":    {Type: "category", Value: "private"},
 }
 
 // parseSwapArgs parses "<address> <amount> <CHAIN.ASSET> [routing_hint]" from command arguments.
@@ -331,7 +332,7 @@ var validHints = map[string]swaps.RoutingHint{
 func parseSwapArgs(args string) (destination string, usdAmount float64, asset swaps.Asset, hint swaps.RoutingHint, err error) {
 	fields := strings.Fields(args)
 	if len(fields) < 3 || len(fields) > 4 {
-		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET> [thorchain|simpleswap|near|dex|private]")
+		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET> [thorchain|simpleswap|near|houdini|dex|private]")
 		return
 	}
 
@@ -356,7 +357,7 @@ func parseSwapArgs(args string) (destination string, usdAmount float64, asset sw
 	if len(fields) == 4 {
 		h, ok := validHints[strings.ToLower(fields[3])]
 		if !ok {
-			err = fmt.Errorf("unknown routing hint %q (use thorchain, simpleswap, near, dex, or private)", fields[3])
+			err = fmt.Errorf("unknown routing hint %q (use thorchain, simpleswap, near, houdini, dex, or private)", fields[3])
 			return
 		}
 		hint = h
