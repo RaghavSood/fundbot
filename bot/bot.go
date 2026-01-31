@@ -694,7 +694,8 @@ func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
 	if syntheticMsg == nil {
 		return
 	}
-	// Use the original message ID for reply context.
+	// Restore the original user and message ID so walletIndex derives the correct wallet.
+	syntheticMsg.From = query.From
 	syntheticMsg.MessageID = pending.MessageID
 
 	var providerNames []string
