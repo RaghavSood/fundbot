@@ -37,6 +37,7 @@ type QuoteResponse struct {
 	AmountIn     float64 `json:"amountIn"`
 	AmountOutUsd float64 `json:"amountOutUsd"`
 	QuoteID      string  `json:"quoteId"`
+	InQuoteID    string  `json:"inQuoteId"`
 	OutQuoteID   string  `json:"outQuoteId"`
 	Min          float64 `json:"min"`
 	Max          float64 `json:"max"`
@@ -152,8 +153,7 @@ func (c *Client) CreateExchangeXMR(ctx context.Context, from, to string, amount 
 		"from":       from,
 		"to":         to,
 		"addressTo":  addressTo,
-		"anonymous":  true,
-		"useXmr":     true,
+		"anonymous":  false,
 		"inQuoteId":  inQuoteID,
 		"outQuoteId": outQuoteID,
 		"ip":         "103.158.32.232",

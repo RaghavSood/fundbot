@@ -341,7 +341,7 @@ func (p *XMRProvider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount 
 				"houdini_from":          fromSymbol,
 				"houdini_to":            toSymbol,
 				"houdini_destination":   destination,
-				"houdini_in_quote_id":   quote.QuoteID,
+				"houdini_in_quote_id":   quote.InQuoteID,
 				"houdini_out_quote_id":  quote.OutQuoteID,
 			},
 		})
