@@ -44,14 +44,14 @@ func (q *Queries) CountTopups(ctx context.Context) (int64, error) {
 }
 
 const countUsers = `-- name: CountUsers :one
-SELECT COUNT(*) FROM users
+SELECT (SELECT COUNT(*) FROM users) + (SELECT COUNT(*) FROM chats)
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countUsers)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getTopupsByUserID = `-- name: GetTopupsByUserID :many
