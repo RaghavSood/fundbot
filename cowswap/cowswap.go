@@ -318,13 +318,20 @@ func (c *Client) RegisterAppData(chain string, appDataHash string, fullAppData s
 }
 
 // SubmitOrder submits a signed order to the CoW Protocol API. Returns the order UID.
-func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, from common.Address) (string, error) {
+// fullAppData is optional: if non-empty, it is sent as the appData field (the full JSON
+// document) so the backend registers any hooks (e.g. EIP-2612 permit pre-hooks).
+// When empty, the bytes32 hash from the quote response is used instead.
+func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, from common.Address, fullAppData string) (string, error) {
 	cc, ok := SupportedChains[chain]
 	if !ok {
 		return "", fmt.Errorf("chain %q not supported by CoW Protocol", chain)
 	}
 
 	q := qr.Quote
+	appDataField := q.AppData
+	if fullAppData != "" {
+		appDataField = fullAppData
+	}
 	order := OrderSubmission{
 		SellToken:         q.SellToken,
 		BuyToken:          q.BuyToken,
@@ -332,7 +339,7 @@ func (c *Client) SubmitOrder(chain string, qr *QuoteResult, signature string, fr
 		SellAmount:        q.SellAmount,
 		BuyAmount:         q.BuyAmount,
 		ValidTo:           q.ValidTo,
-		AppData:           q.AppData,
+		AppData:           appDataField,
 		AppDataHash:       q.AppDataHash,
 		FeeAmount:         q.FeeAmount,
 		Kind:              q.Kind,
@@ -652,21 +659,14 @@ func (c *Client) RefillGasIfNeeded(ctx context.Context, chain string, addr commo
 		return nil, fmt.Errorf("getting quote: %w", err)
 	}
 
-	// Register appData with CoW API (required for hook validation)
-	if appData != "" {
-		if err := c.RegisterAppData(chain, appHash, appData); err != nil {
-			return nil, fmt.Errorf("registering appData: %w", err)
-		}
-	}
-
 	// Sign order
 	sig, err := c.SignOrder(cc, qr, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("signing order: %w", err)
 	}
 
-	// Submit order
-	orderUID, err := c.SubmitOrder(chain, qr, sig, addr)
+	// Submit order — pass full appData JSON so CoW registers the permit hook
+	orderUID, err := c.SubmitOrder(chain, qr, sig, addr, appData)
 	if err != nil {
 		return nil, fmt.Errorf("submitting order: %w", err)
 	}
