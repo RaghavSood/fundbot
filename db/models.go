@@ -22,6 +22,19 @@ type Chat struct {
 	CreatedAt time.Time
 }
 
+type GasRefill struct {
+	ID            int64
+	Chain         string
+	OrderUid      string
+	WalletAddress string
+	SellAmount    string
+	BuyAmount     string
+	Status        string
+	UserID        int64
+	ChatID        int64
+	CreatedAt     time.Time
+}
+
 type Quote struct {
 	ID             int64
 	Type           string

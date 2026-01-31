@@ -190,7 +190,22 @@ func (b *Bot) handleBalance(msg *tgbotapi.Message) {
 			continue
 		}
 		if result != nil {
-			b.reply(msg, fmt.Sprintf("Low %s balance detected. Swapping $5 USDC → %s via CoWSwap.\nOrder: `%s`",
+			// Store gas refill for tracking
+			_, err := b.db.InsertGasRefill(ctx, db.InsertGasRefillParams{
+				Chain:         result.Chain,
+				OrderUid:      result.OrderUID,
+				WalletAddress: addr.Hex(),
+				SellAmount:    result.SellAmount,
+				BuyAmount:     result.BuyAmount,
+				Status:        "open",
+				UserID:        msg.From.ID,
+				ChatID:        msg.Chat.ID,
+			})
+			if err != nil {
+				log.Printf("Error storing gas refill record: %v", err)
+			}
+
+			b.reply(msg, fmt.Sprintf("Low %s balance detected. Swapping $5 USDC → %s via CoWSwap (3m expiry).\nOrder: `%s`",
 				nativeSymbol(bal.Chain), nativeSymbol(bal.Chain), result.OrderUID))
 		}
 	}
