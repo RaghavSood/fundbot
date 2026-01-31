@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — GiveWei</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-surface: #111827;
+      --color-surface-alt: #0f1420;
+      --color-border: #1f2937;
+      --color-muted: #6b7280;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-300 antialiased">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-xl">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+      <a href="/" class="text-lg font-bold text-white tracking-tight">GiveWei</a>
+      <div class="flex items-center gap-6 text-sm font-medium text-gray-500">
+        <a href="/" class="hover:text-white transition">Home</a>
+        <a href="/docs" class="text-white">Docs</a>
+        <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener" class="hover:text-white transition">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mx-auto max-w-3xl px-6 py-16">
+
+    <!-- Intro -->
+    <h1 class="text-4xl font-extrabold tracking-tight text-white">Documentation</h1>
+    <p class="mt-4 text-lg leading-relaxed text-gray-400">
+      GiveWei is a Telegram bot that makes it easy to top up and initialize new crypto addresses with funds. Deposit USDC on Base or Avalanche, then swap to 29+ assets across any supported chain — all from a single Telegram command.
+    </p>
+
+    <!-- How It Works -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="how-it-works">How It Works</h2>
+    <div class="mt-4 space-y-3 text-sm leading-relaxed text-gray-400">
+      <p>GiveWei holds USDC on two EVM chains — <strong class="text-gray-200">Base</strong> and <strong class="text-gray-200">Avalanche</strong> — and uses swap providers to convert it into whatever asset you need. The flow is:</p>
+      <ol class="ml-5 list-decimal space-y-2">
+        <li>The bot derives an EVM wallet for you (or your group chat) from a BIP39 mnemonic.</li>
+        <li>You deposit USDC to that wallet on Base or Avalanche.</li>
+        <li>When you run <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/topup</code>, the bot finds the best swap route, executes the trade from USDC, and delivers the target asset to any address you specify.</li>
+      </ol>
+      <p>The bot automatically selects which chain to swap from based on where you have sufficient USDC balance. If both chains have enough, it picks the route with the best price.</p>
+    </div>
+
+    <!-- Commands -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="commands">Commands</h2>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <th class="pb-3 pr-4">Command</th>
+            <th class="pb-3">Description</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800/60">
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/start</code></td>
+            <td class="py-3 text-gray-400">Show welcome message and command list.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/address</code></td>
+            <td class="py-3 text-gray-400">Display your deposit wallet address.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/balance</code></td>
+            <td class="py-3 text-gray-400">Show USDC and native token balances on Base and Avalanche. Triggers automatic gas refill if native balance is low.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 whitespace-nowrap"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/quote &lt;addr&gt; &lt;$&gt; &lt;CHAIN.ASSET&gt; [routing]</code></td>
+            <td class="py-3 text-gray-400">Get a swap quote without executing. Shows provider, expected output, and source chain.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 whitespace-nowrap"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/topup &lt;addr&gt; &lt;$&gt; &lt;CHAIN.ASSET&gt; [routing]</code></td>
+            <td class="py-3 text-gray-400">Execute a swap. Finds the best route, submits the transaction, and tracks it to completion.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/status &lt;id&gt;</code></td>
+            <td class="py-3 text-gray-400">Check the status of a pending top-up by its short ID.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="mt-8 text-lg font-semibold text-white">Examples</h3>
+    <div class="mt-3 space-y-2 text-sm">
+      <div class="rounded-lg border border-gray-800 bg-surface px-4 py-3">
+        <code class="text-gray-300">/topup 0xABC...123 10 BTC.BTC</code>
+        <span class="ml-2 text-gray-500">— Swap $10 USDC into BTC, best provider</span>
+      </div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-4 py-3">
+        <code class="text-gray-300">/topup 0xABC...123 5 ETH.ETH thorchain</code>
+        <span class="ml-2 text-gray-500">— Force Thorchain for the swap</span>
+      </div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-4 py-3">
+        <code class="text-gray-300">/quote 0xABC...123 20 SOL.SOL private</code>
+        <span class="ml-2 text-gray-500">— Quote using only private/custodial providers</span>
+      </div>
+    </div>
+
+    <!-- Routing Hints -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="routing">Routing Hints</h2>
+    <p class="mt-4 text-sm leading-relaxed text-gray-400">
+      Both <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/quote</code> and <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/topup</code> accept an optional routing hint as the last argument. This controls which providers are used for the swap.
+    </p>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <th class="pb-3 pr-4">Hint</th>
+            <th class="pb-3 pr-4">Type</th>
+            <th class="pb-3">Behavior</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800/60">
+          <tr>
+            <td class="py-3 pr-4 text-gray-300">(none)</td>
+            <td class="py-3 pr-4 text-gray-500">default</td>
+            <td class="py-3 text-gray-400">Best price across all available providers.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">thorchain</code></td>
+            <td class="py-3 pr-4 text-gray-500">provider</td>
+            <td class="py-3 text-gray-400">Force Thorchain. Fails if the pair isn't supported.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">simpleswap</code></td>
+            <td class="py-3 pr-4 text-gray-500">provider</td>
+            <td class="py-3 text-gray-400">Force SimpleSwap. Fails if the pair isn't supported.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">dex</code></td>
+            <td class="py-3 pr-4 text-gray-500">category</td>
+            <td class="py-3 text-gray-400">Only use DEX providers (currently Thorchain). Non-custodial.</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4"><code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">private</code></td>
+            <td class="py-3 pr-4 text-gray-500">category</td>
+            <td class="py-3 text-gray-400">Only use private/custodial providers (currently SimpleSwap).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Providers -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="providers">Swap Providers</h2>
+
+    <div class="mt-6 space-y-4">
+      <div class="rounded-xl border border-gray-800 bg-surface p-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 text-sm font-bold">TC</div>
+          <div>
+            <h3 class="font-semibold text-white">Thorchain</h3>
+            <span class="text-xs text-gray-500">DEX &middot; Non-custodial</span>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-gray-400">
+          Cross-chain DEX that swaps via on-chain liquidity pools. Your USDC is approved to the Thorchain router contract and swapped in a single transaction. Non-custodial — funds go directly from your wallet to the protocol.
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-gray-800 bg-surface p-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 text-sm font-bold">SS</div>
+          <div>
+            <h3 class="font-semibold text-white">SimpleSwap</h3>
+            <span class="text-xs text-gray-500">Private &middot; Custodial</span>
+          </div>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-gray-400">
+          Custodial exchange aggregator. The bot creates an exchange via SimpleSwap's API, then sends USDC to a deposit address. SimpleSwap handles the swap and delivers the output. Supports 29+ assets including BTC, ETH, SOL, DOGE, XRP, ADA, DOT, ATOM, and more.
+        </p>
+      </div>
+    </div>
+
+    <!-- Supported Assets -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="assets">Supported Assets</h2>
+    <p class="mt-4 text-sm leading-relaxed text-gray-400">
+      Assets are specified in <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">CHAIN.ASSET</code> format (Thorchain notation). Both providers understand this format.
+    </p>
+    <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 text-sm">
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BTC.BTC</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">ETH.ETH</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">SOL.SOL</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">DOGE.DOGE</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">AVAX.AVAX</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">GAIA.ATOM</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">DOT.DOT</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">XRP.XRP</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">ADA.ADA</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">LTC.LTC</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BCH.BCH</code></div>
+      <div class="rounded-lg border border-gray-800 bg-surface px-3 py-2"><code class="text-gray-300">BNB.BNB</code></div>
+    </div>
+    <p class="mt-3 text-xs text-gray-500">And many more — the full list depends on which providers are enabled. ERC-20 tokens on EVM chains use the format <code class="rounded bg-gray-800 px-1 py-0.5 text-xs text-gray-400">CHAIN.SYMBOL-0xContractAddress</code>.</p>
+
+    <!-- Source Chains -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="source-chains">Source Chains</h2>
+    <p class="mt-4 text-sm leading-relaxed text-gray-400">
+      GiveWei sources USDC from two chains. You can deposit to either — the bot picks the best one at swap time.
+    </p>
+    <div class="mt-4 space-y-3">
+      <div class="flex items-start gap-4 rounded-xl border border-gray-800 bg-surface p-5">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-bold text-blue-400">B</div>
+        <div>
+          <h4 class="font-semibold text-white">Base</h4>
+          <p class="mt-1 text-sm text-gray-400">USDC on Base (Coinbase L2). Low fees, fast confirmations. USDC contract: <code class="text-xs text-gray-500">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code></p>
+        </div>
+      </div>
+      <div class="flex items-start gap-4 rounded-xl border border-gray-800 bg-surface p-5">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-sm font-bold text-red-400">A</div>
+        <div>
+          <h4 class="font-semibold text-white">Avalanche</h4>
+          <p class="mt-1 text-sm text-gray-400">USDC on Avalanche C-Chain. Sub-second finality. USDC contract: <code class="text-xs text-gray-500">0xB97EF9Ef8734C71904D8002F8B6BC66Dd9c48a6E</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gas Auto-Refill -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="gas-refill">Automatic Gas Refill</h2>
+    <div class="mt-4 text-sm leading-relaxed text-gray-400 space-y-3">
+      <p>
+        Swaps on Base and Avalanche require a small amount of native gas tokens (ETH and AVAX respectively) to pay transaction fees. GiveWei handles this automatically.
+      </p>
+      <p>
+        When you check your <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/balance</code> and a chain's native balance is below ~$1 worth, the bot will swap $5 of USDC into the native token via CoW Protocol (a gasless DEX that uses EIP-2612 permits, so it works even with zero gas balance).
+      </p>
+      <p>
+        Gas refill orders expire after 3 minutes. If the order doesn't fill in time, you'll get a notification — just check <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">/balance</code> again to retry.
+      </p>
+    </div>
+
+    <!-- Modes -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="modes">Single vs Multi Mode</h2>
+    <div class="mt-4 text-sm leading-relaxed text-gray-400 space-y-3">
+      <p><strong class="text-gray-200">Single mode:</strong> One shared wallet (derivation index 0). All users share the same address and USDC balance. Best for personal use or small teams.</p>
+      <p><strong class="text-gray-200">Multi mode:</strong> Each user and each group chat gets a unique wallet derived from the same mnemonic. Users in DMs get their own address; group chats share a group-specific address. Derivation indices are assigned sequentially and never collide.</p>
+    </div>
+
+    <!-- Self-Hosting -->
+    <h2 class="mt-14 text-2xl font-bold text-white" id="self-hosting">Self-Hosting</h2>
+    <div class="mt-4 text-sm leading-relaxed text-gray-400 space-y-3">
+      <p>GiveWei is fully open source and designed to be self-hosted. You control the mnemonic, the config, and the deployment.</p>
+      <ol class="ml-5 list-decimal space-y-2">
+        <li>Clone the <a href="https://github.com/RaghavSood/fundbot" class="text-blue-400 hover:text-blue-300 underline underline-offset-2" target="_blank">repository</a> and build with <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">go build ./cmd/fundbot</code>.</li>
+        <li>Create a <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">config.json</code> based on <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">config.example.json</code>. You'll need a Telegram bot token, a BIP39 mnemonic, and RPC endpoints for Base and Avalanche.</li>
+        <li>Run database migrations: <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">goose -dir db/migrations sqlite3 fundbot.db up</code></li>
+        <li>Start the bot: <code class="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">./fundbot -config config.json</code></li>
+      </ol>
+      <p>The bot runs a web dashboard on the configured HTTP port with live stats, charts, and an admin panel.</p>
+    </div>
+
+    <div class="mt-16 border-t border-gray-800/40 pt-6 text-sm text-gray-600">
+      <a href="https://github.com/RaghavSood/fundbot" target="_blank" rel="noopener" class="hover:text-gray-400 transition">GitHub</a>
+    </div>
+  </div>
+
+</body>
+</html>
