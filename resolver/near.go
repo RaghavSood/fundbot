@@ -11,6 +11,25 @@ import (
 
 const nearTokensURL = "https://1click.chaindefuser.com/v0/tokens"
 
+// chainToNearBlockchain maps our uppercase chain IDs to Near Intents blockchain field values.
+var chainToNearBlockchain = map[string]string{
+	"ETH":     "eth",
+	"BASE":    "base",
+	"AVAX":    "avax",
+	"BSC":     "bsc",
+	"POLYGON": "pol",
+	"ARB":     "arb",
+	"SOL":     "sol",
+	"BTC":     "btc",
+	"LTC":     "ltc",
+	"DOGE":    "doge",
+	"BCH":     "bch",
+	"TRON":    "tron",
+	"TON":     "ton",
+	"SUI":     "sui",
+	"GAIA":    "near",
+}
+
 type nearToken struct {
 	AssetID         string  `json:"assetId"`
 	Symbol          string  `json:"symbol"`
@@ -57,18 +76,24 @@ func (nm *nearMatcher) fetchTokens(ctx context.Context) ([]nearToken, error) {
 	})
 }
 
-// matchToken finds a Near Intents token by symbol (case-insensitive).
-// If multiple matches, prefers the one with highest price (proxy for most liquid).
-func (nm *nearMatcher) matchToken(ctx context.Context, symbol string) (string, bool, error) {
+// matchToken finds a Near Intents token by symbol and chain (both case-insensitive).
+// chain is our uppercase chain ID (e.g. "BASE", "ETH"). If chain is empty, picks by highest price.
+func (nm *nearMatcher) matchToken(ctx context.Context, chain, symbol string) (string, bool, error) {
 	tokens, err := nm.fetchTokens(ctx)
 	if err != nil {
 		return "", false, err
 	}
 
+	wantBlockchain := chainToNearBlockchain[strings.ToUpper(chain)]
+
 	var best *nearToken
 	for i := range tokens {
 		t := &tokens[i]
 		if !strings.EqualFold(t.Symbol, symbol) {
+			continue
+		}
+		// If chain specified, filter by blockchain.
+		if wantBlockchain != "" && !strings.EqualFold(t.Blockchain, wantBlockchain) {
 			continue
 		}
 		if best == nil || t.Price > best.Price {
