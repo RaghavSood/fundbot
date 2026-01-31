@@ -109,6 +109,16 @@ func (m *Manager) CheckStatus(ctx context.Context, provider, txHash, externalID 
 	return "", fmt.Errorf("provider %q not found", provider)
 }
 
+// IsStaticallyKnown returns true if any provider has a static mapping for the asset.
+func (m *Manager) IsStaticallyKnown(asset Asset) bool {
+	for _, p := range m.providers {
+		if p.SupportsAsset(asset) {
+			return true
+		}
+	}
+	return false
+}
+
 // noQuotesError builds a descriptive error when no quotes are available,
 // checking whether insufficient balance is the cause.
 func (m *Manager) noQuotesError(ctx context.Context, toAsset Asset, usdAmount float64, sender common.Address) error {

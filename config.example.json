@@ -17,6 +17,7 @@
       "api_key": "your-near-intents-api-key"
     }
   },
+  "coingecko_api_key": "your-coingecko-api-key",
   "port": 8080,
   "dashboard_password": "",
   "admin_password": "changeme"

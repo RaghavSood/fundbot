@@ -2,11 +2,15 @@ package bot
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,11 +21,26 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
+	"github.com/RaghavSood/fundbot/resolver"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/version"
 	"github.com/RaghavSood/fundbot/wallet"
 )
+
+// pendingResolution stores context for a token confirmation callback.
+type pendingResolution struct {
+	Asset       swaps.Asset
+	Resolution  *resolver.Resolution
+	Command     string // "quote" or "topup"
+	Destination string
+	USDAmount   float64
+	Hint        swaps.RoutingHint
+	ChatID      int64
+	UserID      int64
+	MessageID   int
+	CreatedAt   time.Time
+}
 
 type Bot struct {
 	api        *tgbotapi.BotAPI
@@ -30,9 +49,13 @@ type Bot struct {
 	swapMgr    *swaps.Manager
 	rpcClients map[string]*ethclient.Client
 	cowClient  *cowswap.Client
+	resolver   *resolver.Resolver
+
+	pendingMu          sync.Mutex
+	pendingResolutions map[string]*pendingResolution
 }
 
-func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients map[string]*ethclient.Client, cowClient *cowswap.Client) (*Bot, error) {
+func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients map[string]*ethclient.Client, cowClient *cowswap.Client, res *resolver.Resolver) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(cfg.TelegramToken)
 	if err != nil {
 		return nil, fmt.Errorf("creating bot API: %w", err)
@@ -40,12 +63,14 @@ func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients
 
 	log.Printf("Authorized on account %s", api.Self.UserName)
 	return &Bot{
-		api:        api,
-		config:     cfg,
-		db:         store,
-		swapMgr:    swapMgr,
-		rpcClients: rpcClients,
-		cowClient:  cowClient,
+		api:                api,
+		config:             cfg,
+		db:                 store,
+		swapMgr:            swapMgr,
+		rpcClients:         rpcClients,
+		cowClient:          cowClient,
+		resolver:           res,
+		pendingResolutions: make(map[string]*pendingResolution),
 	}, nil
 }
 
@@ -60,6 +85,11 @@ func (b *Bot) Run() error {
 	updates := b.api.GetUpdatesChan(u)
 
 	for update := range updates {
+		if update.CallbackQuery != nil {
+			b.handleCallback(update.CallbackQuery)
+			continue
+		}
+
 		if update.Message == nil {
 			continue
 		}
@@ -362,6 +392,16 @@ func (b *Bot) handleQuote(msg *tgbotapi.Message) {
 		return
 	}
 
+	// If asset is not statically known, try dynamic resolution.
+	if !b.swapMgr.IsStaticallyKnown(asset) {
+		b.tryResolve(msg, asset, "quote", destination, usdAmount, hint)
+		return
+	}
+
+	b.executeQuote(msg, asset, destination, usdAmount, hint)
+}
+
+func (b *Bot) executeQuote(msg *tgbotapi.Message, asset swaps.Asset, destination string, usdAmount float64, hint swaps.RoutingHint) {
 	index, err := b.walletIndex(msg)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error: %v", err))
@@ -400,7 +440,16 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Derive key early — needed for both balance check and execution
+	// If asset is not statically known, try dynamic resolution.
+	if !b.swapMgr.IsStaticallyKnown(asset) {
+		b.tryResolve(msg, asset, "topup", destination, usdAmount, hint)
+		return
+	}
+
+	b.executeTopup(msg, asset, destination, usdAmount, hint)
+}
+
+func (b *Bot) executeTopup(msg *tgbotapi.Message, asset swaps.Asset, destination string, usdAmount float64, hint swaps.RoutingHint) {
 	index, err := b.walletIndex(msg)
 	if err != nil {
 		b.reply(msg, fmt.Sprintf("Error: %v", err))
@@ -434,7 +483,6 @@ func (b *Bot) handleTopup(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Store topup
 	topupRow, err := b.db.InsertTopupWithShortID(ctx, db.InsertTopupParams{
 		Type:       "fast",
 		QuoteID:    quoteID,
@@ -523,4 +571,163 @@ func (b *Bot) reply(msg *tgbotapi.Message, text string) {
 			log.Printf("Error sending plain text message: %v", err)
 		}
 	}
+}
+
+// tryResolve attempts dynamic token resolution and sends a confirmation prompt.
+func (b *Bot) tryResolve(msg *tgbotapi.Message, asset swaps.Asset, command, destination string, usdAmount float64, hint swaps.RoutingHint) {
+	if b.resolver == nil {
+		b.reply(msg, fmt.Sprintf("Asset %s is not supported. No dynamic token resolution configured.", asset))
+		return
+	}
+
+	b.reply(msg, fmt.Sprintf("Asset %s not in static list, looking up...", asset))
+
+	ctx := context.Background()
+	res, err := b.resolver.Resolve(ctx, asset)
+	if err != nil {
+		b.reply(msg, fmt.Sprintf("Could not resolve asset %s: %v", asset, err))
+		return
+	}
+
+	// Build confirmation message.
+	var providerNames []string
+	for _, pm := range res.Providers {
+		providerNames = append(providerNames, pm.Provider)
+	}
+
+	contractDisplay := ""
+	if res.ContractAddress != "" {
+		contractDisplay = fmt.Sprintf("\nContract: `%s`", res.ContractAddress)
+	}
+
+	text := fmt.Sprintf("Found: *%s (%s)*%s\nAvailable via: %s\n\nConfirm this token for your $%.2f %s?",
+		res.Name, res.Symbol, contractDisplay,
+		strings.Join(providerNames, ", "),
+		usdAmount, command)
+
+	// Generate callback ID.
+	id := randomID()
+
+	b.pendingMu.Lock()
+	b.pendingResolutions[id] = &pendingResolution{
+		Asset:       asset,
+		Resolution:  res,
+		Command:     command,
+		Destination: destination,
+		USDAmount:   usdAmount,
+		Hint:        hint,
+		ChatID:      msg.Chat.ID,
+		UserID:      msg.From.ID,
+		MessageID:   msg.MessageID,
+		CreatedAt:   time.Now(),
+	}
+	b.pendingMu.Unlock()
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Confirm", "resolve:confirm:"+id),
+			tgbotapi.NewInlineKeyboardButtonData("Cancel", "resolve:cancel:"+id),
+		),
+	)
+
+	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	reply.ReplyToMessageID = msg.MessageID
+	reply.ParseMode = "Markdown"
+	reply.DisableWebPagePreview = true
+	reply.ReplyMarkup = keyboard
+	if _, err := b.api.Send(reply); err != nil {
+		log.Printf("Error sending resolution prompt: %v", err)
+	}
+}
+
+// handleCallback processes inline keyboard callbacks for token confirmation.
+func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
+	// Always answer the callback to dismiss the loading indicator.
+	callback := tgbotapi.NewCallback(query.ID, "")
+	if _, err := b.api.Request(callback); err != nil {
+		log.Printf("Error answering callback: %v", err)
+	}
+
+	data := query.Data
+	if !strings.HasPrefix(data, "resolve:") {
+		return
+	}
+
+	parts := strings.SplitN(data, ":", 3)
+	if len(parts) != 3 {
+		return
+	}
+	action := parts[1]
+	id := parts[2]
+
+	b.pendingMu.Lock()
+	pending, ok := b.pendingResolutions[id]
+	if ok {
+		delete(b.pendingResolutions, id)
+	}
+	b.pendingMu.Unlock()
+
+	if !ok || time.Since(pending.CreatedAt) > 5*time.Minute {
+		b.editCallbackMessage(query, "This confirmation has expired.")
+		return
+	}
+
+	// Verify the user who clicked is the one who initiated.
+	if query.From.ID != pending.UserID {
+		return
+	}
+
+	if action == "cancel" {
+		b.editCallbackMessage(query, "Token resolution cancelled.")
+		return
+	}
+
+	if action != "confirm" {
+		return
+	}
+
+	// Apply resolved hints to the asset.
+	pending.Asset.Hints = pending.Resolution.ToHints()
+
+	// Build a synthetic message for the execute functions.
+	syntheticMsg := query.Message
+	if syntheticMsg == nil {
+		return
+	}
+	// Use the original message ID for reply context.
+	syntheticMsg.MessageID = pending.MessageID
+
+	var providerNames []string
+	for _, pm := range pending.Resolution.Providers {
+		providerNames = append(providerNames, pm.Provider)
+	}
+	b.editCallbackMessage(query, fmt.Sprintf("Confirmed: *%s (%s)* via %s",
+		pending.Resolution.Name, pending.Resolution.Symbol,
+		strings.Join(providerNames, ", ")))
+
+	switch pending.Command {
+	case "quote":
+		b.executeQuote(syntheticMsg, pending.Asset, pending.Destination, pending.USDAmount, pending.Hint)
+	case "topup":
+		b.executeTopup(syntheticMsg, pending.Asset, pending.Destination, pending.USDAmount, pending.Hint)
+	}
+}
+
+func (b *Bot) editCallbackMessage(query *tgbotapi.CallbackQuery, text string) {
+	if query.Message == nil {
+		return
+	}
+	edit := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
+	edit.ParseMode = "Markdown"
+	if _, err := b.api.Send(edit); err != nil {
+		log.Printf("Error editing callback message: %v", err)
+	}
+}
+
+func randomID() string {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b)
 }

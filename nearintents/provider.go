@@ -49,8 +49,20 @@ func (p *Provider) Category() string {
 	return "dex"
 }
 
+func (p *Provider) SupportsAsset(asset swaps.Asset) bool {
+	_, ok := AssetToTokenID(asset)
+	return ok
+}
+
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
-	destTokenID, ok := AssetToTokenID(toAsset)
+	var destTokenID string
+	var ok bool
+	if toAsset.Hints != nil && toAsset.Hints.NearIntentsTokenID != "" {
+		destTokenID = toAsset.Hints.NearIntentsTokenID
+		ok = true
+	} else {
+		destTokenID, ok = AssetToTokenID(toAsset)
+	}
 	if !ok {
 		return nil, fmt.Errorf("nearintents: unsupported target asset %s", toAsset)
 	}

@@ -46,6 +46,9 @@ type Config struct {
 	// Provider-specific configuration (e.g. API keys)
 	Providers map[string]ProviderConfig `json:"providers"`
 
+	// CoinGecko API key for dynamic token resolution
+	CoinGeckoAPIKey string `json:"coingecko_api_key"`
+
 	// HTTP server port (default 8080)
 	Port int `json:"port"`
 

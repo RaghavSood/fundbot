@@ -62,6 +62,12 @@ func AssetToSymbol(asset swaps.Asset) (string, bool) {
 	return sym, ok
 }
 
+// LookupSymbol checks the static mapping by a CHAIN.SYMBOL key string (uppercase).
+func LookupSymbol(key string) (string, bool) {
+	sym, ok := assetToSymbol[key]
+	return sym, ok
+}
+
 // SourceSymbol returns the SimpleSwap USDC symbol for a source chain.
 func SourceSymbol(chain string) (string, bool) {
 	sym, ok := sourceChainSymbol[chain]

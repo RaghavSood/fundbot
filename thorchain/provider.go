@@ -46,10 +46,21 @@ func (p *Provider) Category() string {
 	return "dex"
 }
 
+func (p *Provider) SupportsAsset(asset swaps.Asset) bool {
+	// Thorchain has no static mapping — it accepts any asset and validates server-side.
+	return false
+}
+
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
 	// USDC has 6 decimals; Thorchain expects 1e8, so multiply USD by 1e8
 	// (1 USDC = 1 USD, 6 decimals native, thorchain uses 8 decimal representation)
 	thorAmount := int64(usdAmount * 1e8)
+
+	// Use resolved hint if available, otherwise use the asset string directly.
+	toAssetStr := toAsset.String()
+	if toAsset.Hints != nil && toAsset.Hints.ThorchainAsset != "" {
+		toAssetStr = toAsset.Hints.ThorchainAsset
+	}
 
 	// Required USDC in smallest unit (6 decimals)
 	requiredUSDC := new(big.Int).SetInt64(int64(usdAmount * 1e6))
@@ -76,7 +87,7 @@ func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount flo
 			continue
 		}
 
-		quoteResp, err := p.client.GetQuote(ctx, tcAsset, toAsset.String(), destination, thorAmount)
+		quoteResp, err := p.client.GetQuote(ctx, tcAsset, toAssetStr, destination, thorAmount)
 		if err != nil {
 			log.Printf("thorchain quote for %s via %s failed: %v", toAsset, rpcKey, err)
 			continue
