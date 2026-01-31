@@ -54,6 +54,10 @@ func (p *Provider) SupportsAsset(asset swaps.Asset) bool {
 }
 
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
+	if usdAmount < 50 {
+		return nil, fmt.Errorf("houdini: minimum swap amount is $50 (requested $%.2f)", usdAmount)
+	}
+
 	var toSymbol string
 	var ok bool
 	if toAsset.Hints != nil && toAsset.Hints.HoudiniSymbol != "" {
@@ -167,7 +171,7 @@ func (p *Provider) Execute(ctx context.Context, quote swaps.Quote, privateKey *e
 
 	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	txHash, err := p.transferERC20(ctx, rpc, chainID, privateKey, fromAddr, usdcAddr, common.HexToAddress(exchange.SenderAddress), quote.InputAmount)
+	txHash, err := transferERC20(ctx, rpc, chainID, privateKey, fromAddr, usdcAddr, common.HexToAddress(exchange.SenderAddress), quote.InputAmount)
 	if err != nil {
 		return swaps.ExecuteResult{}, fmt.Errorf("houdini USDC transfer: %w", err)
 	}
@@ -205,7 +209,7 @@ func (p *Provider) CheckStatus(ctx context.Context, txHash string, externalID st
 	}
 }
 
-func (p *Provider) transferERC20(ctx context.Context, rpc *ethclient.Client, chainID *big.Int, key *ecdsa.PrivateKey, from, token, to common.Address, amount *big.Int) (string, error) {
+func transferERC20(ctx context.Context, rpc *ethclient.Client, chainID *big.Int, key *ecdsa.PrivateKey, from, token, to common.Address, amount *big.Int) (string, error) {
 	parsed, err := abi.JSON(strings.NewReader(erc20TransferABI))
 	if err != nil {
 		return "", err
@@ -247,6 +251,177 @@ func (p *Provider) transferERC20(ctx context.Context, rpc *ethclient.Client, cha
 	}
 
 	return signedTx.Hash().Hex(), nil
+}
+
+// XMRProvider is a Houdini provider variant that routes via anonymous XMR.
+// It is excluded from normal routing and only activated by the "hxmr" hint.
+type XMRProvider struct {
+	client     *Client
+	rpcClients map[string]*ethclient.Client
+}
+
+func NewXMRProvider(apiKey, apiSecret string, rpcClients map[string]*ethclient.Client) *XMRProvider {
+	return &XMRProvider{
+		client:     NewClient(apiKey, apiSecret),
+		rpcClients: rpcClients,
+	}
+}
+
+func (p *XMRProvider) Name() string     { return "houdini-xmr" }
+func (p *XMRProvider) Category() string { return "xmr-private" }
+
+func (p *XMRProvider) SupportsAsset(asset swaps.Asset) bool {
+	_, ok := AssetToSymbol(asset)
+	return ok
+}
+
+func (p *XMRProvider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
+	if usdAmount < 50 {
+		return nil, fmt.Errorf("houdini-xmr: minimum swap amount is $50 (requested $%.2f)", usdAmount)
+	}
+
+	var toSymbol string
+	var ok bool
+	if toAsset.Hints != nil && toAsset.Hints.HoudiniSymbol != "" {
+		toSymbol = toAsset.Hints.HoudiniSymbol
+		ok = true
+	} else {
+		toSymbol, ok = AssetToSymbol(toAsset)
+	}
+	if !ok {
+		return nil, fmt.Errorf("houdini-xmr: unsupported target asset %s", toAsset)
+	}
+
+	requiredUSDC := new(big.Int).SetInt64(int64(usdAmount * 1e6))
+
+	var quotes []swaps.Quote
+
+	for _, chain := range SupportedSourceChains() {
+		fromSymbol, ok := SourceSymbol(chain)
+		if !ok {
+			continue
+		}
+
+		rpc, ok := p.rpcClients[chain]
+		if !ok {
+			continue
+		}
+		usdcAddr, ok := thorchain.USDCContracts[chain]
+		if !ok {
+			continue
+		}
+		bal, err := balances.USDCBalance(ctx, rpc, usdcAddr, sender)
+		if err != nil {
+			log.Printf("houdini-xmr: error checking USDC balance on %s: %v", chain, err)
+			continue
+		}
+		if bal.Cmp(requiredUSDC) < 0 {
+			continue
+		}
+
+		quote, err := p.client.GetQuoteXMR(ctx, fromSymbol, toSymbol, usdAmount)
+		if err != nil {
+			log.Printf("houdini-xmr quote for %s via %s failed: %v", toAsset, chain, err)
+			continue
+		}
+
+		expectedOut := parseToBigInt(fmt.Sprintf("%g", quote.AmountOut))
+		inputAmount := new(big.Int).SetInt64(int64(usdAmount * 1e6))
+
+		quotes = append(quotes, swaps.Quote{
+			Provider:          "houdini-xmr",
+			FromAsset:         mustParseAsset(chain),
+			ToAsset:           toAsset,
+			FromChain:         chain,
+			InputAmountUSD:    usdAmount,
+			InputAmount:       inputAmount,
+			ExpectedOutput:    fmt.Sprintf("%g", quote.AmountOut),
+			ExpectedOutputRaw: expectedOut,
+			ExtraData: map[string]interface{}{
+				"houdini_from":          fromSymbol,
+				"houdini_to":            toSymbol,
+				"houdini_destination":   destination,
+				"houdini_in_quote_id":   quote.QuoteID,
+				"houdini_out_quote_id":  quote.OutQuoteID,
+			},
+		})
+	}
+
+	if len(quotes) == 0 {
+		return nil, fmt.Errorf("houdini-xmr: no quotes available for %s", toAsset)
+	}
+
+	return quotes, nil
+}
+
+func (p *XMRProvider) Execute(ctx context.Context, quote swaps.Quote, privateKey *ecdsa.PrivateKey) (swaps.ExecuteResult, error) {
+	fromSymbol, _ := quote.ExtraData["houdini_from"].(string)
+	toSymbol, _ := quote.ExtraData["houdini_to"].(string)
+	if fromSymbol == "" || toSymbol == "" {
+		return swaps.ExecuteResult{}, fmt.Errorf("houdini-xmr: missing exchange symbols in quote ExtraData")
+	}
+
+	destination, _ := quote.ExtraData["houdini_destination"].(string)
+	if destination == "" {
+		return swaps.ExecuteResult{}, fmt.Errorf("houdini-xmr: missing destination in quote ExtraData")
+	}
+
+	inQuoteID, _ := quote.ExtraData["houdini_in_quote_id"].(string)
+	outQuoteID, _ := quote.ExtraData["houdini_out_quote_id"].(string)
+
+	rpc, ok := p.rpcClients[quote.FromChain]
+	if !ok {
+		return swaps.ExecuteResult{}, fmt.Errorf("no RPC client for chain %s", quote.FromChain)
+	}
+
+	chainID, ok := chainIDs[quote.FromChain]
+	if !ok {
+		return swaps.ExecuteResult{}, fmt.Errorf("unknown chain ID for %s", quote.FromChain)
+	}
+
+	usdcAddr, ok := thorchain.USDCContracts[quote.FromChain]
+	if !ok {
+		return swaps.ExecuteResult{}, fmt.Errorf("no USDC contract for %s", quote.FromChain)
+	}
+
+	exchange, err := p.client.CreateExchangeXMR(ctx, fromSymbol, toSymbol, quote.InputAmountUSD, destination, inQuoteID, outQuoteID)
+	if err != nil {
+		return swaps.ExecuteResult{}, fmt.Errorf("houdini-xmr create exchange: %w", err)
+	}
+
+	log.Printf("Houdini XMR exchange created: houdiniId=%s, deposit=%s", exchange.HoudiniID, exchange.SenderAddress)
+
+	fromAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	txHash, err := transferERC20(ctx, rpc, chainID, privateKey, fromAddr, usdcAddr, common.HexToAddress(exchange.SenderAddress), quote.InputAmount)
+	if err != nil {
+		return swaps.ExecuteResult{}, fmt.Errorf("houdini-xmr USDC transfer: %w", err)
+	}
+
+	return swaps.ExecuteResult{
+		TxHash:     txHash,
+		ExternalID: exchange.HoudiniID,
+	}, nil
+}
+
+func (p *XMRProvider) CheckStatus(ctx context.Context, txHash string, externalID string) (string, error) {
+	if externalID == "" {
+		return "pending", nil
+	}
+
+	status, err := p.client.GetStatus(ctx, externalID)
+	if err != nil {
+		return "", fmt.Errorf("houdini-xmr get status: %w", err)
+	}
+
+	switch {
+	case status.Status == 4:
+		return "completed", nil
+	case status.Status >= 5:
+		return "failed", nil
+	default:
+		return "pending", nil
+	}
 }
 
 // mustParseAsset returns a USDC asset for the given source chain.

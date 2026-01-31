@@ -61,6 +61,8 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - Numeric status codes: 0=waiting, 1=confirming, 2=exchanging, 3=sending, 4=completed, 5+=failed
 - Config: `"providers": {"houdini": {"api_key": "...", "api_secret": "..."}}` — nested under `providers` key
 - Source USDC symbols: `USDCAVAXC` (Avalanche), `USDCBASE` (Base)
+- **$50 minimum** on all Houdini swaps (both regular and XMR)
+- **XMR routing** (`houdini-xmr` provider, `hxmr` hint): anonymous XMR-routed swaps via `anonymous=true&useXmr=true`. Uses both `inQuoteId` and `outQuoteId` from quote. Category `"xmr-private"` — excluded from normal routing, only activated explicitly.
 
 ### CoWSwap (`cowswap/`)
 - Client for CoW Protocol API — currently used for gas refills, designed for future general swap support

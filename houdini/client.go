@@ -37,6 +37,7 @@ type QuoteResponse struct {
 	AmountIn     float64 `json:"amountIn"`
 	AmountOutUsd float64 `json:"amountOutUsd"`
 	QuoteID      string  `json:"quoteId"`
+	OutQuoteID   string  `json:"outQuoteId"`
 	Min          float64 `json:"min"`
 	Max          float64 `json:"max"`
 	Duration     int     `json:"duration"`
@@ -108,6 +109,91 @@ func (c *Client) getQuote(ctx context.Context, from, to string, amount float64, 
 	}
 
 	return &result, nil
+}
+
+// GetQuoteXMR requests a quote using anonymous XMR routing.
+func (c *Client) GetQuoteXMR(ctx context.Context, from, to string, amount float64) (*QuoteResponse, error) {
+	u := fmt.Sprintf("%s/quote?amount=%g&from=%s&to=%s&anonymous=true&useXmr=true&cexOnly=true",
+		baseURL, amount, url.QueryEscape(from), url.QueryEscape(to))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", c.authHeader())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("houdini xmr quote: %s: %s", resp.Status, body)
+	}
+
+	var result QuoteResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("parsing xmr quote response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// CreateExchangeXMR initiates an anonymous XMR-routed swap.
+func (c *Client) CreateExchangeXMR(ctx context.Context, from, to string, amount float64, addressTo, inQuoteID, outQuoteID string) (*ExchangeResponse, error) {
+	payload := map[string]interface{}{
+		"amount":     amount,
+		"from":       from,
+		"to":         to,
+		"addressTo":  addressTo,
+		"anonymous":  true,
+		"useXmr":     true,
+		"inQuoteId":  inQuoteID,
+		"outQuoteId": outQuoteID,
+		"ip":         "103.158.32.232",
+		"userAgent":  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+		"timezone":   "UTC",
+	}
+
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/exchange", strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", c.authHeader())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("houdini xmr exchange: %s: %s", resp.Status, body)
+	}
+
+	var exchange ExchangeResponse
+	if err := json.Unmarshal(body, &exchange); err != nil {
+		return nil, fmt.Errorf("parsing xmr exchange response: %w", err)
+	}
+
+	return &exchange, nil
 }
 
 // CreateExchange initiates a swap and returns the exchange details including the deposit address.
