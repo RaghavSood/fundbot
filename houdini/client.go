@@ -66,9 +66,20 @@ type StatusResponse struct {
 }
 
 // GetQuote requests a price quote for a swap.
+// It first tries CEX-only routes, falling back to all routes if no CEX quote is available.
 func (c *Client) GetQuote(ctx context.Context, from, to string, amount float64) (*QuoteResponse, error) {
-	u := fmt.Sprintf("%s/quote?amount=%g&from=%s&to=%s&anonymous=false",
-		baseURL, amount, url.QueryEscape(from), url.QueryEscape(to))
+	// Try CEX-only first
+	quote, err := c.getQuote(ctx, from, to, amount, true)
+	if err != nil {
+		// Fall back to all routes (includes "no wallet connect" / NWC)
+		return c.getQuote(ctx, from, to, amount, false)
+	}
+	return quote, nil
+}
+
+func (c *Client) getQuote(ctx context.Context, from, to string, amount float64, cexOnly bool) (*QuoteResponse, error) {
+	u := fmt.Sprintf("%s/quote?amount=%g&from=%s&to=%s&anonymous=false&cexOnly=%t",
+		baseURL, amount, url.QueryEscape(from), url.QueryEscape(to), cexOnly)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
