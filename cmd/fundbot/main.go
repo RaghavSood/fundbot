@@ -12,6 +12,7 @@ import (
 
 	"github.com/RaghavSood/fundbot/bot"
 	"github.com/RaghavSood/fundbot/config"
+	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/server"
 	"github.com/RaghavSood/fundbot/simpleswap"
@@ -61,8 +62,12 @@ func main() {
 	// Initialize swap manager
 	swapMgr := swaps.NewManager(providers...)
 
+	// Initialize CoWSwap client for gas refills
+	cowClient := cowswap.NewClient(rpcClients)
+	log.Println("CoWSwap client enabled for gas refills")
+
 	// Create and run bot
-	b, err := bot.New(cfg, database, swapMgr, rpcClients)
+	b, err := bot.New(cfg, database, swapMgr, rpcClients, cowClient)
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)
 	}

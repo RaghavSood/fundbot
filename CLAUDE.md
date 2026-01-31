@@ -52,6 +52,17 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - Config: `"providers": {"simpleswap": {"api_key": "..."}}` — nested under `providers` key
 - Source USDC symbols: `usdcavaxc` (Avalanche), `usdcbase` (Base)
 
+### CoWSwap (`cowswap/`)
+- Client for CoW Protocol API — currently used for gas refills, designed for future general swap support
+- Supports Base and Avalanche chains (`api.cow.fi/base`, `api.cow.fi/avalanche`)
+- Core methods: `GetQuote()`, `SignOrder()` (EIP-712), `SubmitOrder()`, `CheckOrderStatus()` — all public for reuse
+- `EnsureApproval()`: checks allowance to vault relayer (`0xC92E...0110`), submits max-approval tx if needed
+- `RefillGasIfNeeded()`: high-level gas refill — checks threshold, approves, quotes, signs, submits
+- Settlement contract: `0x9008D19f58AAbD9eD0D60971565AA8510560ab41` (same on all chains)
+- Native token buy address: `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`
+- Order signing: EIP-712 with domain `{name: "Gnosis Protocol", version: "v2", chainId, verifyingContract: settlement}`
+- Gas refill triggered by `/balance` command when native balance < ~$1 worth and USDC balance >= $5
+
 ### Balance Checking
 - `balances/` package provides `USDCBalance()` and `FetchBalances()` helpers
 - `balances` package does NOT import `thorchain` (avoids import cycle) — USDC contract addresses are passed as parameters

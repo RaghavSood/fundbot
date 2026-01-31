@@ -15,6 +15,7 @@ import (
 
 	"github.com/RaghavSood/fundbot/balances"
 	"github.com/RaghavSood/fundbot/config"
+	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
@@ -28,9 +29,10 @@ type Bot struct {
 	db         *db.Store
 	swapMgr    *swaps.Manager
 	rpcClients map[string]*ethclient.Client
+	cowClient  *cowswap.Client
 }
 
-func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients map[string]*ethclient.Client) (*Bot, error) {
+func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients map[string]*ethclient.Client, cowClient *cowswap.Client) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(cfg.TelegramToken)
 	if err != nil {
 		return nil, fmt.Errorf("creating bot API: %w", err)
@@ -43,6 +45,7 @@ func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, rpcClients
 		db:         store,
 		swapMgr:    swapMgr,
 		rpcClients: rpcClients,
+		cowClient:  cowClient,
 	}, nil
 }
 
@@ -114,6 +117,16 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 	}
 }
 
+// Minimum native balance thresholds (~$1 worth of gas token).
+// Conservative estimates to avoid unnecessary refills.
+var minNativeWei = map[string]*big.Int{
+	"base":      new(big.Int).Mul(big.NewInt(4), big.NewInt(1e14)), // 0.0004 ETH (~$1 at $2500)
+	"avalanche": new(big.Int).Mul(big.NewInt(4), big.NewInt(1e16)), // 0.04 AVAX (~$1 at $25)
+}
+
+// refillUSDC is $5 USDC in smallest units (6 decimals).
+var refillUSDC = big.NewInt(5_000_000)
+
 func (b *Bot) handleBalance(msg *tgbotapi.Message) {
 	index, err := b.walletIndex(msg)
 	if err != nil {
@@ -146,6 +159,41 @@ func (b *Bot) handleBalance(msg *tgbotapi.Message) {
 		text += fmt.Sprintf("\n*%s*\n  %s\n  %s USDC", chainLabel(bal.Chain), native, usdc)
 	}
 	b.reply(msg, text)
+
+	// Check if any chain needs a gas refill (USDC → native token via CoWSwap)
+	if b.cowClient == nil {
+		return
+	}
+
+	privateKey, err := wallet.DeriveKey(b.config.Mnemonic, index)
+	if err != nil {
+		log.Printf("Error deriving key for gas refill: %v", err)
+		return
+	}
+
+	for _, bal := range bals {
+		threshold, ok := minNativeWei[bal.Chain]
+		if !ok {
+			continue
+		}
+
+		nativeBal := new(big.Int)
+		nativeBal.SetString(bal.NativeBalance, 10)
+
+		usdcBal := new(big.Int)
+		usdcBal.SetString(bal.USDCBalance, 10)
+
+		result, err := b.cowClient.RefillGasIfNeeded(ctx, bal.Chain, addr, privateKey, nativeBal, usdcBal, threshold, refillUSDC)
+		if err != nil {
+			log.Printf("Gas refill error on %s: %v", bal.Chain, err)
+			b.reply(msg, fmt.Sprintf("Gas refill error on %s: %v", chainLabel(bal.Chain), err))
+			continue
+		}
+		if result != nil {
+			b.reply(msg, fmt.Sprintf("Low %s balance detected. Swapping $5 USDC → %s via CoWSwap.\nOrder: `%s`",
+				nativeSymbol(bal.Chain), nativeSymbol(bal.Chain), result.OrderUID))
+		}
+	}
 }
 
 func formatWei(wei string, chain string) string {
