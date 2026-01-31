@@ -14,6 +14,7 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
+	"github.com/RaghavSood/fundbot/nearintents"
 	"github.com/RaghavSood/fundbot/server"
 	"github.com/RaghavSood/fundbot/simpleswap"
 	"github.com/RaghavSood/fundbot/swaps"
@@ -57,6 +58,12 @@ func main() {
 		ssProvider := simpleswap.NewProvider(ssCfg.APIKey, rpcClients)
 		providers = append(providers, ssProvider)
 		log.Println("SimpleSwap provider enabled")
+	}
+
+	if niCfg, ok := cfg.Providers["nearintents"]; ok && niCfg.APIKey != "" {
+		niProvider := nearintents.NewProvider(niCfg.APIKey, rpcClients)
+		providers = append(providers, niProvider)
+		log.Println("Near Intents provider enabled")
 	}
 
 	// Initialize swap manager
