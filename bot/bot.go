@@ -296,7 +296,7 @@ func (b *Bot) handleStart(msg *tgbotapi.Message) {
 		"`simpleswap` - Private, custodial\n" +
 		"`near` - DEX, intent-based (Near Intents)\n" +
 		"`houdini` - Private, CEX-routed\n" +
-		"`hxmr` - Private, anonymous XMR-routed ($50 min)\n" +
+		"`hxmr` - Private, anonymous XMR-routed\n" +
 		"`dex` - Any DEX provider\n" +
 		"`private` - Any private/custodial provider\n" +
 		"Omit for best price across all providers."

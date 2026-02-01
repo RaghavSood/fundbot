@@ -67,6 +67,40 @@ type StatusResponse struct {
 	HashURL   string `json:"hashUrl"`
 }
 
+// GetMinMax returns the [min, max] amounts (in source token units) for a pair.
+func (c *Client) GetMinMax(ctx context.Context, from, to string, anonymous bool) (min, max float64, err error) {
+	u := fmt.Sprintf("%s/getMinMax?from=%s&to=%s&anonymous=%t&cexOnly=true",
+		baseURL, url.QueryEscape(from), url.QueryEscape(to), anonymous)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return 0, 0, err
+	}
+	req.Header.Set("Authorization", c.authHeader())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, 0, fmt.Errorf("houdini getMinMax: %s: %s", resp.Status, body)
+	}
+
+	var result [2]float64
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, 0, fmt.Errorf("parsing getMinMax response: %w", err)
+	}
+
+	return result[0], result[1], nil
+}
+
 // GetQuote requests a price quote for a swap.
 // It first tries CEX-only routes, falling back to all routes if no CEX quote is available.
 func (c *Client) GetQuote(ctx context.Context, from, to string, amount float64) (*QuoteResponse, error) {

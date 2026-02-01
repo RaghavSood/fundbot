@@ -54,10 +54,6 @@ func (p *Provider) SupportsAsset(asset swaps.Asset) bool {
 }
 
 func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
-	if usdAmount < 50 {
-		return nil, fmt.Errorf("houdini: minimum swap amount is $50 (requested $%.2f)", usdAmount)
-	}
-
 	var toSymbol string
 	var ok bool
 	if toAsset.Hints != nil && toAsset.Hints.HoudiniSymbol != "" {
@@ -77,6 +73,17 @@ func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount flo
 	for _, chain := range SupportedSourceChains() {
 		fromSymbol, ok := SourceSymbol(chain)
 		if !ok {
+			continue
+		}
+
+		// Check dynamic minimum
+		minAmt, _, err := p.client.GetMinMax(ctx, fromSymbol, toSymbol, false)
+		if err != nil {
+			log.Printf("houdini: error checking min/max for %s→%s: %v", fromSymbol, toSymbol, err)
+			continue
+		}
+		if usdAmount < minAmt {
+			log.Printf("houdini: skipping %s, below minimum $%.2f (requested $%.2f)", chain, minAmt, usdAmount)
 			continue
 		}
 
@@ -276,10 +283,6 @@ func (p *XMRProvider) SupportsAsset(asset swaps.Asset) bool {
 }
 
 func (p *XMRProvider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount float64, destination string, sender common.Address) ([]swaps.Quote, error) {
-	if usdAmount < 50 {
-		return nil, fmt.Errorf("houdini-xmr: minimum swap amount is $50 (requested $%.2f)", usdAmount)
-	}
-
 	var toSymbol string
 	var ok bool
 	if toAsset.Hints != nil && toAsset.Hints.HoudiniSymbol != "" {
@@ -299,6 +302,17 @@ func (p *XMRProvider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount 
 	for _, chain := range SupportedSourceChains() {
 		fromSymbol, ok := SourceSymbol(chain)
 		if !ok {
+			continue
+		}
+
+		// Check dynamic minimum (anonymous=true for XMR routes)
+		minAmt, _, err := p.client.GetMinMax(ctx, fromSymbol, toSymbol, true)
+		if err != nil {
+			log.Printf("houdini-xmr: error checking min/max for %s→%s: %v", fromSymbol, toSymbol, err)
+			continue
+		}
+		if usdAmount < minAmt {
+			log.Printf("houdini-xmr: skipping %s, below minimum $%.2f (requested $%.2f)", chain, minAmt, usdAmount)
 			continue
 		}
 
