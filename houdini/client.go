@@ -146,9 +146,9 @@ func (c *Client) getQuote(ctx context.Context, from, to string, amount float64, 
 	return &result, nil
 }
 
-// GetQuoteXMR requests a quote using anonymous XMR routing.
-func (c *Client) GetQuoteXMR(ctx context.Context, from, to string, amount float64) (*QuoteResponse, error) {
-	u := fmt.Sprintf("%s/quote?amount=%g&from=%s&to=%s&anonymous=true&useXmr=true&cexOnly=true",
+// GetQuoteAnon requests a quote using anonymous routing.
+func (c *Client) GetQuoteAnon(ctx context.Context, from, to string, amount float64) (*QuoteResponse, error) {
+	u := fmt.Sprintf("%s/quote?amount=%g&from=%s&to=%s&anonymous=true&cexOnly=true",
 		baseURL, amount, url.QueryEscape(from), url.QueryEscape(to))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
@@ -169,30 +169,31 @@ func (c *Client) GetQuoteXMR(ctx context.Context, from, to string, amount float6
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("houdini xmr quote: %s: %s", resp.Status, body)
+		return nil, fmt.Errorf("houdini anon quote: %s: %s", resp.Status, body)
 	}
 
 	var result QuoteResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("parsing xmr quote response: %w", err)
+		return nil, fmt.Errorf("parsing anon quote response: %w", err)
 	}
 
 	return &result, nil
 }
 
-// CreateExchangeXMR initiates an anonymous XMR-routed swap.
-func (c *Client) CreateExchangeXMR(ctx context.Context, from, to string, amount float64, addressTo, inQuoteID, outQuoteID string) (*ExchangeResponse, error) {
+// CreateExchangeAnon initiates an anonymous swap.
+// We intentionally omit quote IDs because the Houdini API returns 500 when
+// anonymous=true is combined with quote IDs. Without IDs, the API re-quotes
+// internally and the exchange succeeds.
+func (c *Client) CreateExchangeAnon(ctx context.Context, from, to string, amount float64, addressTo string) (*ExchangeResponse, error) {
 	payload := map[string]interface{}{
-		"amount":     amount,
-		"from":       from,
-		"to":         to,
-		"addressTo":  addressTo,
-		"anonymous":  false,
-		"inQuoteId":  inQuoteID,
-		"outQuoteId": outQuoteID,
-		"ip":         "103.158.32.232",
-		"userAgent":  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-		"timezone":   "UTC",
+		"amount":    amount,
+		"from":      from,
+		"to":        to,
+		"addressTo": addressTo,
+		"anonymous": true,
+		"ip":        "103.158.32.232",
+		"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+		"timezone":  "UTC",
 	}
 
 	jsonBody, err := json.Marshal(payload)
@@ -219,12 +220,12 @@ func (c *Client) CreateExchangeXMR(ctx context.Context, from, to string, amount 
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("houdini xmr exchange: %s: %s", resp.Status, body)
+		return nil, fmt.Errorf("houdini anon exchange: %s: %s", resp.Status, body)
 	}
 
 	var exchange ExchangeResponse
 	if err := json.Unmarshal(body, &exchange); err != nil {
-		return nil, fmt.Errorf("parsing xmr exchange response: %w", err)
+		return nil, fmt.Errorf("parsing anon exchange response: %w", err)
 	}
 
 	return &exchange, nil

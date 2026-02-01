@@ -73,9 +73,9 @@ func main() {
 		providers = append(providers, hProvider)
 		log.Println("Houdini Swap provider enabled")
 
-		hxmrProvider := houdini.NewXMRProvider(hCfg.APIKey, hCfg.APISecret, rpcClients)
-		providers = append(providers, hxmrProvider)
-		log.Println("Houdini XMR provider enabled")
+		hanonProvider := houdini.NewAnonProvider(hCfg.APIKey, hCfg.APISecret, rpcClients)
+		providers = append(providers, hanonProvider)
+		log.Println("Houdini anonymous provider enabled")
 	}
 
 	// Initialize swap manager
