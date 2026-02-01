@@ -18,7 +18,7 @@ WHERE CASE WHEN @search = '' THEN 1 ELSE (
     OR COALESCE(response_body, '') LIKE '%' || @search || '%'
     OR COALESCE(error, '') LIKE '%' || @search || '%'
 ) END
-ORDER BY created_at DESC LIMIT ? OFFSET ?;
+ORDER BY created_at DESC LIMIT @limit OFFSET @offset;
 
 -- name: CountAPIRequests :one
 SELECT COUNT(*) FROM api_requests

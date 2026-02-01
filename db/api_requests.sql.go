@@ -97,28 +97,28 @@ const searchAPIRequests = `-- name: SearchAPIRequests :many
 SELECT id, provider, method, url, request_headers, request_body,
        response_status, response_headers, response_body, duration_ms, error, created_at
 FROM api_requests
-WHERE CASE WHEN ? = '' THEN 1 ELSE (
-    provider LIKE '%' || ? || '%'
-    OR method LIKE '%' || ? || '%'
-    OR url LIKE '%' || ? || '%'
-    OR COALESCE(request_headers, '') LIKE '%' || ? || '%'
-    OR COALESCE(request_body, '') LIKE '%' || ? || '%'
-    OR CAST(COALESCE(response_status, 0) AS TEXT) LIKE '%' || ? || '%'
-    OR COALESCE(response_headers, '') LIKE '%' || ? || '%'
-    OR COALESCE(response_body, '') LIKE '%' || ? || '%'
-    OR COALESCE(error, '') LIKE '%' || ? || '%'
+WHERE CASE WHEN ?1 = '' THEN 1 ELSE (
+    provider LIKE '%' || ?1 || '%'
+    OR method LIKE '%' || ?1 || '%'
+    OR url LIKE '%' || ?1 || '%'
+    OR COALESCE(request_headers, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(request_body, '') LIKE '%' || ?1 || '%'
+    OR CAST(COALESCE(response_status, 0) AS TEXT) LIKE '%' || ?1 || '%'
+    OR COALESCE(response_headers, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(response_body, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(error, '') LIKE '%' || ?1 || '%'
 ) END
-ORDER BY created_at DESC LIMIT ? OFFSET ?
+ORDER BY created_at DESC LIMIT ?3 OFFSET ?2
 `
 
 type SearchAPIRequestsParams struct {
 	Search interface{}
-	Limit  int64
 	Offset int64
+	Limit  int64
 }
 
 func (q *Queries) SearchAPIRequests(ctx context.Context, arg SearchAPIRequestsParams) ([]ApiRequest, error) {
-	rows, err := q.db.QueryContext(ctx, searchAPIRequests, arg.Search, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, searchAPIRequests, arg.Search, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
