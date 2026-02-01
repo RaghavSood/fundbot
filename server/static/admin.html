@@ -26,6 +26,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-white border-blue-500" data-tab="transactions">Transactions</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="users">Users</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="balances">Balances</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="apilogs">API Logs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="export">Export Key</button>
     </div>
 
@@ -78,6 +79,39 @@
         </table>
       </div>
     </div>
+
+    <!-- API Logs -->
+    <div class="tab-content hidden" id="tab-apilogs">
+      <h2 class="text-lg font-semibold text-gray-200 mb-4">API Request Logs</h2>
+      <div class="flex items-center gap-3 mb-4">
+        <input type="text" id="apilogs-search" placeholder="Search all fields..." class="w-full max-w-md rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:border-blue-500 focus:outline-none">
+        <button id="apilogs-search-btn" class="rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition whitespace-nowrap">Search</button>
+      </div>
+      <div id="apilogs-count" class="text-xs text-gray-500 mb-2"></div>
+      <div class="overflow-x-auto rounded-lg border border-gray-800">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-gray-900/80 text-[11px] uppercase tracking-wider text-gray-500">
+            <tr><th class="px-3 py-2.5">ID</th><th class="px-3 py-2.5">Provider</th><th class="px-3 py-2.5">Method</th><th class="px-3 py-2.5">URL</th><th class="px-3 py-2.5">Status</th><th class="px-3 py-2.5">Duration</th><th class="px-3 py-2.5">Time</th><th class="px-3 py-2.5"></th></tr>
+          </thead>
+          <tbody id="apilogs-body" class="divide-y divide-gray-800/60">
+            <tr><td colspan="8" class="px-3 py-4 text-center text-gray-500 italic">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button id="apilogs-prev" disabled class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 disabled:opacity-40 hover:bg-gray-800 transition">&larr; Prev</button>
+        <button id="apilogs-next" class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 transition">Next &rarr;</button>
+      </div>
+    </div>
+
+    <!-- API Log Detail Dialog -->
+    <dialog id="apilog-dialog" class="bg-gray-900 text-gray-300 rounded-xl border border-gray-700 shadow-2xl p-0 w-full max-w-3xl max-h-[85vh] backdrop:bg-black/60">
+      <div class="sticky top-0 flex items-center justify-between border-b border-gray-800 bg-gray-900 px-6 py-4">
+        <h3 class="text-base font-semibold text-white">API Request Detail</h3>
+        <button onclick="document.getElementById('apilog-dialog').close()" class="text-gray-500 hover:text-gray-300 text-lg cursor-pointer">&times;</button>
+      </div>
+      <div id="apilog-detail" class="p-6 overflow-y-auto space-y-4 text-xs" style="max-height: calc(85vh - 60px);"></div>
+    </dialog>
 
     <!-- Export Key -->
     <div class="tab-content hidden" id="tab-export">
@@ -228,6 +262,105 @@
       const whole = val / BigInt(1e6);
       const frac = (val % BigInt(1e6)).toString().padStart(6, '0').slice(0, 2);
       return `${whole}.${frac}`;
+    }
+
+    // API Logs
+    let apilogPage = 0;
+    const apilogPageSize = 50;
+    let apilogSearch = '';
+
+    function loadAPILogs() {
+      const q = encodeURIComponent(apilogSearch);
+      fetch(`/api/admin/api-logs?limit=${apilogPageSize}&offset=${apilogPage * apilogPageSize}&q=${q}`)
+        .then(r => r.json())
+        .then(data => {
+          const body = document.getElementById('apilogs-body');
+          const rows = data.rows || [];
+          const total = data.total || 0;
+          document.getElementById('apilogs-count').textContent = total > 0 ? `${total} result${total !== 1 ? 's' : ''}` : '';
+          if (rows.length === 0) {
+            body.innerHTML = '<tr><td colspan="8" class="px-3 py-4 text-center text-gray-500">No API logs found.</td></tr>';
+            return;
+          }
+          body.innerHTML = rows.map(r => {
+            const statusColor = r.ResponseStatus && r.ResponseStatus.Valid
+              ? (r.ResponseStatus.Int64 >= 400 ? 'text-red-400' : r.ResponseStatus.Int64 >= 300 ? 'text-amber-400' : 'text-emerald-400')
+              : 'text-gray-500';
+            const statusText = r.ResponseStatus && r.ResponseStatus.Valid ? r.ResponseStatus.Int64 : '-';
+            const durationText = r.DurationMs && r.DurationMs.Valid ? r.DurationMs.Int64 + 'ms' : '-';
+            const truncUrl = r.Url.length > 60 ? r.Url.slice(0, 60) + '...' : r.Url;
+            const hasError = r.Error && r.Error.Valid && r.Error.String;
+            return `<tr class="hover:bg-gray-900/50">
+              <td class="px-3 py-2 text-gray-500">${r.ID}</td>
+              <td class="px-3 py-2"><span class="rounded bg-gray-800 px-1.5 py-0.5 text-[11px]">${r.Provider}</span></td>
+              <td class="px-3 py-2 font-mono">${r.Method}</td>
+              <td class="px-3 py-2 max-w-xs truncate" title="${r.Url}">${truncUrl}</td>
+              <td class="px-3 py-2 font-mono ${statusColor}">${statusText}${hasError ? ' <span class="text-red-400">ERR</span>' : ''}</td>
+              <td class="px-3 py-2 text-gray-500">${durationText}</td>
+              <td class="px-3 py-2 text-gray-500">${new Date(r.CreatedAt).toLocaleString()}</td>
+              <td class="px-3 py-2"><button onclick="showAPILogDetail(${r.ID})" class="text-blue-400 hover:underline cursor-pointer">Details</button></td>
+            </tr>`;
+          }).join('');
+          document.getElementById('apilogs-prev').disabled = apilogPage === 0;
+          document.getElementById('apilogs-next').disabled = rows.length < apilogPageSize;
+        });
+    }
+
+    document.getElementById('apilogs-search-btn').addEventListener('click', () => {
+      apilogSearch = document.getElementById('apilogs-search').value.trim();
+      apilogPage = 0;
+      loadAPILogs();
+    });
+    document.getElementById('apilogs-search').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { apilogSearch = e.target.value.trim(); apilogPage = 0; loadAPILogs(); }
+    });
+    document.getElementById('apilogs-prev').addEventListener('click', () => { apilogPage--; loadAPILogs(); });
+    document.getElementById('apilogs-next').addEventListener('click', () => { apilogPage++; loadAPILogs(); });
+    let apilogsLoaded = false;
+    document.querySelector('[data-tab="apilogs"]').addEventListener('click', () => { if (!apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); } });
+
+    function showAPILogDetail(id) {
+      fetch(`/api/admin/api-log/${id}`)
+        .then(r => r.json())
+        .then(d => {
+          const detail = document.getElementById('apilog-detail');
+          const ns = v => (v && v.Valid) ? v.String : '';
+          const ni = v => (v && v.Valid) ? v.Int64 : '';
+          const fmtBody = s => {
+            if (!s) return '<span class="text-gray-600 italic">empty</span>';
+            try { return '<pre class="whitespace-pre-wrap break-all bg-gray-950 rounded-lg p-3 border border-gray-800 overflow-x-auto">' + JSON.stringify(JSON.parse(s), null, 2) + '</pre>'; }
+            catch { return '<pre class="whitespace-pre-wrap break-all bg-gray-950 rounded-lg p-3 border border-gray-800 overflow-x-auto">' + escapeHtml(s) + '</pre>'; }
+          };
+          const fmtHeaders = s => {
+            if (!s) return '<span class="text-gray-600 italic">none</span>';
+            return '<pre class="whitespace-pre-wrap break-all bg-gray-950 rounded-lg p-3 border border-gray-800 overflow-x-auto">' + escapeHtml(s) + '</pre>';
+          };
+          const statusCode = ni(d.ResponseStatus);
+          const statusColor = statusCode >= 400 ? 'text-red-400' : statusCode >= 300 ? 'text-amber-400' : 'text-emerald-400';
+          const errorSection = ns(d.Error) ? `<div><h4 class="text-[11px] uppercase tracking-wider text-red-400 mb-1">Error</h4><pre class="whitespace-pre-wrap break-all bg-red-950/30 text-red-300 rounded-lg p-3 border border-red-900/40">${escapeHtml(ns(d.Error))}</pre></div>` : '';
+
+          detail.innerHTML = `
+            <div class="grid grid-cols-2 gap-4">
+              <div><span class="text-gray-500">Provider</span><div class="text-white mt-0.5">${d.Provider}</div></div>
+              <div><span class="text-gray-500">Method</span><div class="text-white mt-0.5 font-mono">${d.Method}</div></div>
+              <div class="col-span-2"><span class="text-gray-500">URL</span><div class="text-blue-400 mt-0.5 break-all">${d.Url}</div></div>
+              <div><span class="text-gray-500">Status</span><div class="mt-0.5 font-mono ${statusColor}">${statusCode || '-'}</div></div>
+              <div><span class="text-gray-500">Duration</span><div class="text-white mt-0.5">${ni(d.DurationMs) !== '' ? ni(d.DurationMs) + 'ms' : '-'}</div></div>
+              <div class="col-span-2"><span class="text-gray-500">Timestamp</span><div class="text-white mt-0.5">${new Date(d.CreatedAt).toLocaleString()}</div></div>
+            </div>
+            ${errorSection}
+            <div><h4 class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Request Headers</h4>${fmtHeaders(ns(d.RequestHeaders))}</div>
+            <div><h4 class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Request Body</h4>${fmtBody(ns(d.RequestBody))}</div>
+            <div><h4 class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Response Headers</h4>${fmtHeaders(ns(d.ResponseHeaders))}</div>
+            <div><h4 class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Response Body</h4>${fmtBody(ns(d.ResponseBody))}</div>
+          `;
+          document.getElementById('apilog-dialog').showModal();
+        })
+        .catch(e => alert('Error loading detail: ' + e));
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     // Export Key

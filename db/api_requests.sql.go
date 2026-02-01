@@ -10,6 +10,54 @@ import (
 	"database/sql"
 )
 
+const countAPIRequests = `-- name: CountAPIRequests :one
+SELECT COUNT(*) FROM api_requests
+WHERE CASE WHEN ?1 = '' THEN 1 ELSE (
+    provider LIKE '%' || ?1 || '%'
+    OR method LIKE '%' || ?1 || '%'
+    OR url LIKE '%' || ?1 || '%'
+    OR COALESCE(request_headers, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(request_body, '') LIKE '%' || ?1 || '%'
+    OR CAST(COALESCE(response_status, 0) AS TEXT) LIKE '%' || ?1 || '%'
+    OR COALESCE(response_headers, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(response_body, '') LIKE '%' || ?1 || '%'
+    OR COALESCE(error, '') LIKE '%' || ?1 || '%'
+) END
+`
+
+func (q *Queries) CountAPIRequests(ctx context.Context, search interface{}) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAPIRequests, search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getAPIRequest = `-- name: GetAPIRequest :one
+SELECT id, provider, method, url, request_headers, request_body,
+       response_status, response_headers, response_body, duration_ms, error, created_at
+FROM api_requests WHERE id = ?
+`
+
+func (q *Queries) GetAPIRequest(ctx context.Context, id int64) (ApiRequest, error) {
+	row := q.db.QueryRowContext(ctx, getAPIRequest, id)
+	var i ApiRequest
+	err := row.Scan(
+		&i.ID,
+		&i.Provider,
+		&i.Method,
+		&i.Url,
+		&i.RequestHeaders,
+		&i.RequestBody,
+		&i.ResponseStatus,
+		&i.ResponseHeaders,
+		&i.ResponseBody,
+		&i.DurationMs,
+		&i.Error,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertAPIRequest = `-- name: InsertAPIRequest :exec
 INSERT INTO api_requests (provider, method, url, request_headers, request_body,
     response_status, response_headers, response_body, duration_ms, error)
@@ -43,4 +91,64 @@ func (q *Queries) InsertAPIRequest(ctx context.Context, arg InsertAPIRequestPara
 		arg.Error,
 	)
 	return err
+}
+
+const searchAPIRequests = `-- name: SearchAPIRequests :many
+SELECT id, provider, method, url, request_headers, request_body,
+       response_status, response_headers, response_body, duration_ms, error, created_at
+FROM api_requests
+WHERE CASE WHEN ? = '' THEN 1 ELSE (
+    provider LIKE '%' || ? || '%'
+    OR method LIKE '%' || ? || '%'
+    OR url LIKE '%' || ? || '%'
+    OR COALESCE(request_headers, '') LIKE '%' || ? || '%'
+    OR COALESCE(request_body, '') LIKE '%' || ? || '%'
+    OR CAST(COALESCE(response_status, 0) AS TEXT) LIKE '%' || ? || '%'
+    OR COALESCE(response_headers, '') LIKE '%' || ? || '%'
+    OR COALESCE(response_body, '') LIKE '%' || ? || '%'
+    OR COALESCE(error, '') LIKE '%' || ? || '%'
+) END
+ORDER BY created_at DESC LIMIT ? OFFSET ?
+`
+
+type SearchAPIRequestsParams struct {
+	Search interface{}
+	Limit  int64
+	Offset int64
+}
+
+func (q *Queries) SearchAPIRequests(ctx context.Context, arg SearchAPIRequestsParams) ([]ApiRequest, error) {
+	rows, err := q.db.QueryContext(ctx, searchAPIRequests, arg.Search, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ApiRequest
+	for rows.Next() {
+		var i ApiRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.Provider,
+			&i.Method,
+			&i.Url,
+			&i.RequestHeaders,
+			&i.RequestBody,
+			&i.ResponseStatus,
+			&i.ResponseHeaders,
+			&i.ResponseBody,
+			&i.DurationMs,
+			&i.Error,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

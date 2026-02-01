@@ -82,6 +82,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/user/", s.withAdminAuth(s.handleAdminUserDetail))
 	mux.HandleFunc("/api/admin/balances", s.withAdminAuth(s.handleAdminBalances))
 	mux.HandleFunc("/api/admin/export-key", s.withAdminAuth(s.handleExportKey))
+	mux.HandleFunc("/api/admin/api-logs", s.withAdminAuth(s.handleAdminAPILogs))
+	mux.HandleFunc("/api/admin/api-log/", s.withAdminAuth(s.handleAdminAPILogDetail))
 	mux.HandleFunc("/api/explorers", s.withDashAuth(s.handleExplorers))
 
 	addr := fmt.Sprintf(":%d", s.cfg.Port)
@@ -406,6 +408,49 @@ func (s *Server) handleChartsAPI(w http.ResponseWriter, r *http.Request) {
 		"volume_by_day":      byDay,
 		"volume_by_provider": byProvider,
 	})
+}
+
+func (s *Server) handleAdminAPILogs(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	limit, _ := strconv.ParseInt(r.URL.Query().Get("limit"), 10, 64)
+	offset, _ := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
+	search := r.URL.Query().Get("q")
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	rows, err := s.store.SearchAPIRequests(ctx, db.SearchAPIRequestsParams{
+		Search: search,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	total, _ := s.store.CountAPIRequests(ctx, search)
+
+	writeJSON(w, map[string]interface{}{
+		"rows":  rows,
+		"total": total,
+	})
+}
+
+func (s *Server) handleAdminAPILogDetail(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/api/admin/api-log/"):]
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	row, err := s.store.GetAPIRequest(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, row)
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
