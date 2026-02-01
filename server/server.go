@@ -66,8 +66,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, staticSub, "docs.html")
 	})
-	mux.HandleFunc("/api/dashboard", s.handleDashboardAPI)
-	mux.HandleFunc("/api/charts", s.handleChartsAPI)
+	mux.HandleFunc("/api/dashboard", s.withDashAuth(s.handleDashboardAPI))
+	mux.HandleFunc("/api/charts", s.withDashAuth(s.handleChartsAPI))
 
 	// Dashboard login
 	mux.HandleFunc("/login", s.handleDashLogin)
@@ -321,7 +321,12 @@ func (s *Server) handleAdminUserDetail(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var addresses []common.Address
+
+	type addrInfo struct {
+		addr  common.Address
+		owner string
+	}
+	var infos []addrInfo
 
 	if s.cfg.Mode == config.ModeSingle {
 		addr, err := wallet.DeriveAddress(s.cfg.Mnemonic, 0)
@@ -329,8 +334,19 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		addresses = []common.Address{addr}
+		infos = append(infos, addrInfo{addr: addr, owner: "Shared Wallet"})
 	} else {
+		users, _ := s.store.ListUsers(ctx)
+		userMap := make(map[int64]db.User)
+		for _, u := range users {
+			userMap[u.ID] = u
+		}
+		chats, _ := s.store.ListChats(ctx)
+		chatMap := make(map[int64]db.Chat)
+		for _, c := range chats {
+			chatMap[c.ID] = c
+		}
+
 		assignments, err := s.store.ListAddressAssignments(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -341,8 +357,28 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
-			addresses = append(addresses, addr)
+			owner := "Unknown"
+			switch a.AssignedToType {
+			case "user":
+				if u, ok := userMap[a.AssignedToID]; ok {
+					if u.Username != "" {
+						owner = u.Username
+					} else {
+						owner = fmt.Sprintf("User #%d", u.TelegramID)
+					}
+				}
+			case "chat":
+				if c, ok := chatMap[a.AssignedToID]; ok {
+					owner = c.Title
+				}
+			}
+			infos = append(infos, addrInfo{addr: addr, owner: owner})
 		}
+	}
+
+	addresses := make([]common.Address, len(infos))
+	for i, info := range infos {
+		addresses[i] = info.addr
 	}
 
 	balances, err := FetchBalances(ctx, s.rpcClients, addresses, thorchain.USDCContracts)
@@ -351,7 +387,52 @@ func (s *Server) handleAdminBalances(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, balances)
+	// Build owner lookup
+	ownerByAddr := make(map[string]string)
+	for _, info := range infos {
+		ownerByAddr[info.addr.Hex()] = info.owner
+	}
+
+	// Group balances by address
+	type groupedBalance struct {
+		Address       string `json:"address"`
+		Owner         string `json:"owner"`
+		AvaxNative    string `json:"avax_native"`
+		AvaxUSDC      string `json:"avax_usdc"`
+		BaseNative    string `json:"base_native"`
+		BaseUSDC      string `json:"base_usdc"`
+	}
+	grouped := make(map[string]*groupedBalance)
+	// Ensure order matches input
+	var orderedAddrs []string
+	for _, info := range infos {
+		hex := info.addr.Hex()
+		if _, ok := grouped[hex]; !ok {
+			orderedAddrs = append(orderedAddrs, hex)
+			grouped[hex] = &groupedBalance{Address: hex, Owner: ownerByAddr[hex], AvaxNative: "0", AvaxUSDC: "0", BaseNative: "0", BaseUSDC: "0"}
+		}
+	}
+	for _, b := range balances {
+		g, ok := grouped[b.Address]
+		if !ok {
+			continue
+		}
+		switch b.Chain {
+		case "avalanche":
+			g.AvaxNative = b.NativeBalance
+			g.AvaxUSDC = b.USDCBalance
+		case "base":
+			g.BaseNative = b.NativeBalance
+			g.BaseUSDC = b.USDCBalance
+		}
+	}
+
+	result := make([]groupedBalance, 0, len(orderedAddrs))
+	for _, addr := range orderedAddrs {
+		result = append(result, *grouped[addr])
+	}
+
+	writeJSON(w, result)
 }
 
 func (s *Server) handleExportKey(w http.ResponseWriter, r *http.Request) {

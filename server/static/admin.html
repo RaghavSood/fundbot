@@ -77,10 +77,10 @@
       <div class="overflow-x-auto rounded-lg border border-gray-800">
         <table class="w-full text-left text-xs">
           <thead class="bg-gray-900/80 text-[11px] uppercase tracking-wider text-gray-500">
-            <tr><th class="px-3 py-2.5">Address</th><th class="px-3 py-2.5">Chain</th><th class="px-3 py-2.5">Native Balance</th><th class="px-3 py-2.5">USDC Balance</th></tr>
+            <tr><th class="px-3 py-2.5">Owner</th><th class="px-3 py-2.5">Address</th><th class="px-3 py-2.5">AVAX</th><th class="px-3 py-2.5">USDC (Avax)</th><th class="px-3 py-2.5">ETH (Base)</th><th class="px-3 py-2.5">USDC (Base)</th></tr>
           </thead>
           <tbody id="balances-body" class="divide-y divide-gray-800/60">
-            <tr><td colspan="4" class="px-3 py-4 text-center text-gray-500 italic">Click refresh to load balances.</td></tr>
+            <tr><td colspan="6" class="px-3 py-4 text-center text-gray-500 italic">Click refresh to load balances.</td></tr>
           </tbody>
         </table>
       </div>
@@ -244,24 +244,22 @@
     // Balances
     document.getElementById('refresh-balances').addEventListener('click', () => {
       const body = document.getElementById('balances-body');
-      body.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500 italic">Loading balances...</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500 italic">Loading balances...</td></tr>';
       fetch('/api/admin/balances')
         .then(r => r.json())
         .then(bals => {
           if (!bals || bals.length === 0) {
-            body.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">No balances found.</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">No balances found.</td></tr>';
             return;
           }
-          body.innerHTML = bals.map(b => {
-            const native = formatWei(b.native_balance, b.chain);
-            const usdc = formatUSDC(b.usdc_balance);
-            return `<tr class="hover:bg-gray-900/50">
+          body.innerHTML = bals.map(b => `<tr class="hover:bg-gray-900/50">
+              <td class="px-3 py-2 text-white">${escapeHtml(b.owner)}</td>
               <td class="px-3 py-2">${addrCell(b.address)}</td>
-              <td class="px-3 py-2">${b.chain}</td>
-              <td class="px-3 py-2 font-mono">${native}</td>
-              <td class="px-3 py-2 font-mono">${usdc} USDC</td>
-            </tr>`;
-          }).join('');
+              <td class="px-3 py-2 font-mono">${formatWei(b.avax_native, 'avalanche')}</td>
+              <td class="px-3 py-2 font-mono">${formatUSDC(b.avax_usdc)} USDC</td>
+              <td class="px-3 py-2 font-mono">${formatWei(b.base_native, 'base')}</td>
+              <td class="px-3 py-2 font-mono">${formatUSDC(b.base_usdc)} USDC</td>
+            </tr>`).join('');
         });
     });
 
