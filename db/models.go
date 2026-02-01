@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -13,6 +14,21 @@ type AddressAssignment struct {
 	AssignedToID   int64
 	AssignedToType string
 	CreatedAt      time.Time
+}
+
+type ApiRequest struct {
+	ID              int64
+	Provider        string
+	Method          string
+	Url             string
+	RequestHeaders  sql.NullString
+	RequestBody     sql.NullString
+	ResponseStatus  sql.NullInt64
+	ResponseHeaders sql.NullString
+	ResponseBody    sql.NullString
+	DurationMs      sql.NullInt64
+	Error           sql.NullString
+	CreatedAt       sql.NullTime
 }
 
 type Chat struct {

@@ -77,12 +77,10 @@ type Client struct {
 	lastReq    time.Time
 }
 
-func NewClient() *Client {
+func NewClient(httpClient *http.Client) *Client {
 	return &Client{
-		baseURL: ThornodeBaseURL,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		baseURL:    ThornodeBaseURL,
+		httpClient: httpClient,
 	}
 }
 

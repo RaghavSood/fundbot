@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const baseURL = "https://api-partner.houdiniswap.com"
@@ -19,11 +18,11 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(apiKey, apiSecret string) *Client {
+func NewClient(apiKey, apiSecret string, httpClient *http.Client) *Client {
 	return &Client{
 		apiKey:     apiKey,
 		apiSecret:  apiSecret,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: httpClient,
 	}
 }
 

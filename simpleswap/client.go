@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const baseURL = "https://api.simpleswap.io"
@@ -18,10 +17,10 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(apiKey string) *Client {
+func NewClient(apiKey string, httpClient *http.Client) *Client {
 	return &Client{
 		apiKey:     apiKey,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: httpClient,
 	}
 }
 

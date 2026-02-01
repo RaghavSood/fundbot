@@ -76,9 +76,9 @@ type Client struct {
 }
 
 // NewClient creates a new CoW Protocol client.
-func NewClient(rpcClients map[string]*ethclient.Client) *Client {
+func NewClient(rpcClients map[string]*ethclient.Client, httpClient *http.Client) *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: httpClient,
 		rpcClients: rpcClients,
 	}
 }

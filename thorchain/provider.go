@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -31,9 +32,9 @@ type Provider struct {
 	rpcClients map[string]*ethclient.Client // keyed by "avalanche", "base"
 }
 
-func NewProvider(rpcClients map[string]*ethclient.Client) *Provider {
+func NewProvider(rpcClients map[string]*ethclient.Client, httpClient *http.Client) *Provider {
 	return &Provider{
-		client:     NewClient(),
+		client:     NewClient(httpClient),
 		rpcClients: rpcClients,
 	}
 }

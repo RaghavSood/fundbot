@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/RaghavSood/fundbot/apilog"
 	"github.com/RaghavSood/fundbot/bot"
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/cowswap"
@@ -53,27 +54,28 @@ func main() {
 
 	// Initialize providers
 	var providers []swaps.Provider
-	tcProvider := thorchain.NewProvider(rpcClients)
+	tcProvider := thorchain.NewProvider(rpcClients, apilog.NewHTTPClient("thorchain", database))
 	providers = append(providers, tcProvider)
 
 	if ssCfg, ok := cfg.Providers["simpleswap"]; ok && ssCfg.APIKey != "" {
-		ssProvider := simpleswap.NewProvider(ssCfg.APIKey, rpcClients)
+		ssProvider := simpleswap.NewProvider(ssCfg.APIKey, rpcClients, apilog.NewHTTPClient("simpleswap", database))
 		providers = append(providers, ssProvider)
 		log.Println("SimpleSwap provider enabled")
 	}
 
 	if niCfg, ok := cfg.Providers["nearintents"]; ok && niCfg.APIKey != "" {
-		niProvider := nearintents.NewProvider(niCfg.APIKey, rpcClients)
+		niProvider := nearintents.NewProvider(niCfg.APIKey, rpcClients, apilog.NewHTTPClient("nearintents", database))
 		providers = append(providers, niProvider)
 		log.Println("Near Intents provider enabled")
 	}
 
 	if hCfg, ok := cfg.Providers["houdini"]; ok && hCfg.APIKey != "" {
-		hProvider := houdini.NewProvider(hCfg.APIKey, hCfg.APISecret, rpcClients)
+		hHTTP := apilog.NewHTTPClient("houdini", database)
+		hProvider := houdini.NewProvider(hCfg.APIKey, hCfg.APISecret, rpcClients, hHTTP)
 		providers = append(providers, hProvider)
 		log.Println("Houdini Swap provider enabled")
 
-		hanonProvider := houdini.NewAnonProvider(hCfg.APIKey, hCfg.APISecret, rpcClients)
+		hanonProvider := houdini.NewAnonProvider(hCfg.APIKey, hCfg.APISecret, rpcClients, hHTTP)
 		providers = append(providers, hanonProvider)
 		log.Println("Houdini anonymous provider enabled")
 	}
@@ -82,7 +84,7 @@ func main() {
 	swapMgr := swaps.NewManager(rpcClients, thorchain.USDCContracts, providers...)
 
 	// Initialize CoWSwap client for gas refills
-	cowClient := cowswap.NewClient(rpcClients)
+	cowClient := cowswap.NewClient(rpcClients, apilog.NewHTTPClient("cowswap", database))
 	log.Println("CoWSwap client enabled for gas refills")
 
 	// Initialize token resolver

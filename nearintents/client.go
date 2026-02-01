@@ -11,16 +11,18 @@ import (
 
 // Client wraps the 1click SDK with API key authentication.
 type Client struct {
-	api    *oneclick.APIClient
-	apiKey string
+	api        *oneclick.APIClient
+	apiKey     string
+	httpClient *http.Client
 }
 
 // NewClient creates a new Near Intents 1click API client.
-func NewClient(apiKey string) *Client {
+func NewClient(apiKey string, httpClient *http.Client) *Client {
 	cfg := oneclick.NewConfiguration()
 	return &Client{
-		api:    oneclick.NewAPIClient(cfg),
-		apiKey: apiKey,
+		api:        oneclick.NewAPIClient(cfg),
+		apiKey:     apiKey,
+		httpClient: httpClient,
 	}
 }
 
@@ -64,7 +66,7 @@ func (c *Client) GetExecutionStatus(ctx context.Context, depositAddress string) 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("nearintents GetExecutionStatus: %w", err)
 	}

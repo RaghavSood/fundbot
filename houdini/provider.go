@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -33,9 +34,9 @@ type Provider struct {
 	rpcClients map[string]*ethclient.Client
 }
 
-func NewProvider(apiKey, apiSecret string, rpcClients map[string]*ethclient.Client) *Provider {
+func NewProvider(apiKey, apiSecret string, rpcClients map[string]*ethclient.Client, httpClient *http.Client) *Provider {
 	return &Provider{
-		client:     NewClient(apiKey, apiSecret),
+		client:     NewClient(apiKey, apiSecret, httpClient),
 		rpcClients: rpcClients,
 	}
 }
@@ -267,9 +268,9 @@ type AnonProvider struct {
 	rpcClients map[string]*ethclient.Client
 }
 
-func NewAnonProvider(apiKey, apiSecret string, rpcClients map[string]*ethclient.Client) *AnonProvider {
+func NewAnonProvider(apiKey, apiSecret string, rpcClients map[string]*ethclient.Client, httpClient *http.Client) *AnonProvider {
 	return &AnonProvider{
-		client:     NewClient(apiKey, apiSecret),
+		client:     NewClient(apiKey, apiSecret, httpClient),
 		rpcClients: rpcClients,
 	}
 }
