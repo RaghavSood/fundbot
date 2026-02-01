@@ -32,7 +32,10 @@
 
     <!-- Transactions -->
     <div class="tab-content" id="tab-transactions">
-      <h2 class="text-lg font-semibold text-gray-200 mb-4">Recent Transactions</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-200">Recent Transactions</h2>
+        <button onclick="page=0;loadTopups()" class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 transition cursor-pointer">&#x21bb; Refresh</button>
+      </div>
       <div class="overflow-x-auto rounded-lg border border-gray-800">
         <table class="w-full text-left text-xs">
           <thead class="bg-gray-900/80 text-[11px] uppercase tracking-wider text-gray-500">
@@ -51,7 +54,10 @@
 
     <!-- Users -->
     <div class="tab-content hidden" id="tab-users">
-      <h2 class="text-lg font-semibold text-gray-200 mb-4">Users</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-200">Users</h2>
+        <button onclick="loadUsers()" class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 transition cursor-pointer">&#x21bb; Refresh</button>
+      </div>
       <div class="overflow-x-auto rounded-lg border border-gray-800">
         <table class="w-full text-left text-xs">
           <thead class="bg-gray-900/80 text-[11px] uppercase tracking-wider text-gray-500">
@@ -82,7 +88,10 @@
 
     <!-- API Logs -->
     <div class="tab-content hidden" id="tab-apilogs">
-      <h2 class="text-lg font-semibold text-gray-200 mb-4">API Request Logs</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-200">API Request Logs</h2>
+        <button onclick="apilogPage=0;loadAPILogs()" class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 transition cursor-pointer">&#x21bb; Refresh</button>
+      </div>
       <div class="flex items-center gap-3 mb-4">
         <input type="text" id="apilogs-search" placeholder="Search all fields..." class="w-full max-w-md rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:border-blue-500 focus:outline-none">
         <button id="apilogs-search-btn" class="rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition whitespace-nowrap">Search</button>
@@ -161,15 +170,19 @@
       return `<span class="${colors[status] || 'text-gray-400'}">${status}</span>`;
     }
 
-    // Tab switching
+    // Tab switching with hash persistence
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('text-white', 'border-blue-500'); b.classList.add('text-gray-500', 'border-transparent'); });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+      if (!btn) return;
+      btn.classList.remove('text-gray-500', 'border-transparent');
+      btn.classList.add('text-white', 'border-blue-500');
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      location.hash = tabName;
+    }
     document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('text-white', 'border-blue-500'); b.classList.add('text-gray-500', 'border-transparent'); });
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        btn.classList.remove('text-gray-500', 'border-transparent');
-        btn.classList.add('text-white', 'border-blue-500');
-        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
-      });
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
     // Transactions
@@ -206,23 +219,27 @@
     loadTopups();
 
     // Users
-    fetch('/api/admin/users')
-      .then(r => r.json())
-      .then(users => {
-        const body = document.getElementById('users-body');
-        if (!users || users.length === 0) {
-          body.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">No users found.</td></tr>';
-          return;
-        }
-        body.innerHTML = users.map(u => `<tr class="hover:bg-gray-900/50">
-          <td class="px-3 py-2">${u.ID}</td>
-          <td class="px-3 py-2">${u.TelegramID}</td>
-          <td class="px-3 py-2">${u.Username || '-'}</td>
-          <td class="px-3 py-2">${u.index}</td>
-          <td class="px-3 py-2">${addrCell(u.address)}</td>
-          <td class="px-3 py-2 text-gray-500">${new Date(u.CreatedAt).toLocaleString()}</td>
-        </tr>`).join('');
-      });
+    function loadUsers() {
+      const body = document.getElementById('users-body');
+      body.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500 italic">Loading...</td></tr>';
+      fetch('/api/admin/users')
+        .then(r => r.json())
+        .then(users => {
+          if (!users || users.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">No users found.</td></tr>';
+            return;
+          }
+          body.innerHTML = users.map(u => `<tr class="hover:bg-gray-900/50">
+            <td class="px-3 py-2">${u.ID}</td>
+            <td class="px-3 py-2">${u.TelegramID}</td>
+            <td class="px-3 py-2">${u.Username || '-'}</td>
+            <td class="px-3 py-2">${u.index}</td>
+            <td class="px-3 py-2">${addrCell(u.address)}</td>
+            <td class="px-3 py-2 text-gray-500">${new Date(u.CreatedAt).toLocaleString()}</td>
+          </tr>`).join('');
+        });
+    }
+    loadUsers();
 
     // Balances
     document.getElementById('refresh-balances').addEventListener('click', () => {
@@ -318,6 +335,21 @@
     document.getElementById('apilogs-next').addEventListener('click', () => { apilogPage++; loadAPILogs(); });
     let apilogsLoaded = false;
     document.querySelector('[data-tab="apilogs"]').addEventListener('click', () => { if (!apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); } });
+
+    // Restore tab from hash
+    const validTabs = ['transactions', 'users', 'balances', 'apilogs', 'export'];
+    const hashTab = location.hash.replace('#', '');
+    if (validTabs.includes(hashTab)) {
+      switchTab(hashTab);
+      if (hashTab === 'apilogs' && !apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); }
+    }
+    window.addEventListener('hashchange', () => {
+      const t = location.hash.replace('#', '');
+      if (validTabs.includes(t)) {
+        switchTab(t);
+        if (t === 'apilogs' && !apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); }
+      }
+    });
 
     function showAPILogDetail(id) {
       fetch(`/api/admin/api-log/${id}`)
