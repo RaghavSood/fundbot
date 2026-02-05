@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -239,15 +238,7 @@ func (p *Provider) transferERC20(ctx context.Context, rpc *ethclient.Client, cha
 
 	log.Printf("SimpleSwap USDC transfer sent: %s", signedTx.Hash().Hex())
 
-	// Wait for mining
-	receipt, err := bind.WaitMined(ctx, rpc, signedTx)
-	if err != nil {
-		return "", fmt.Errorf("waiting for transfer: %w", err)
-	}
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		return "", fmt.Errorf("transfer tx failed")
-	}
-
+	// Don't wait for mining - return immediately and let status polling handle confirmation
 	return signedTx.Hash().Hex(), nil
 }
 

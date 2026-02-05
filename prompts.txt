@@ -1,0 +1,24 @@
+# Prompt History for FundBot
+
+## Session 1
+
+### Prompt 1
+We recently added support for API logging of req/response and headers for all clients.
+
+The table on root@139.59.111.203 is correctly populated in /var/lib/givewei/fundbot.db
+
+However, our admin view just stays stuck on loading, and does not list anything or search
+
+### Prompt 2
+This works
+
+Let's update admint to support page refreshes - right now it resets to the Transactions tab on every reload - let's use anchor tags to rember our tab
+
+Additionally, we should add refresh buttons to each view to reload the data without refreshing the whole page
+
+### Prompt 3
+Let's update our balances adming view to have base/avalanche ETH/AVAX and USDC as columns - so there is only one row per address
+
+Let's also show the name of the user/chat
+
+Additionally, conduct an in-depth review of our Admin APIs and portal to ensure nothing can be leaked

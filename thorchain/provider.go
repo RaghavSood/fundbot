@@ -197,8 +197,11 @@ func (p *Provider) approveERC20(ctx context.Context, rpc *ethclient.Client, chai
 
 	log.Printf("Approve tx sent: %s", signedTx.Hash().Hex())
 
-	// Wait for approval to be mined
-	receipt, err := bind.WaitMined(ctx, rpc, signedTx)
+	// Wait for approval to be mined with 2-minute timeout (deposit depends on this)
+	waitCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	receipt, err := bind.WaitMined(waitCtx, rpc, signedTx)
 	if err != nil {
 		return fmt.Errorf("waiting for approve: %w", err)
 	}
