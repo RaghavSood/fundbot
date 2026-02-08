@@ -22,3 +22,41 @@ Let's update our balances adming view to have base/avalanche ETH/AVAX and USDC a
 Let's also show the name of the user/chat
 
 Additionally, conduct an in-depth review of our Admin APIs and portal to ensure nothing can be leaked
+
+### Prompt 4
+Sometimes, the bot attempts to broadcast the tx and gets stuck
+
+The logs don't show any errors
+
+Feb 05 20:07:28 fundbot-prod systemd[1]: Started givewei.service - GiveWei FundBot.
+Feb 05 20:07:28 fundbot-prod fundbot[140261]: 2026/02/05 20:07:28 goose: no migrations to run. current version: 7
+[...logs showing successful startup, then SimpleSwap exchange creation...]
+Feb 05 20:07:57 fundbot-prod fundbot[140261]: 2026/02/05 20:07:57 SimpleSwap USDC transfer sent: 0xf13ceee0e5ca29bd4c742dec15e254917bd74bc6f9a9d9c20bc8242583a2479b
+
+But the transaction never reaches the mempool, and the bot stops responding to future messages until restarted.
+
+Let's analyze the code responsible for this, and fix it
+
+### Prompt 5
+Looks like we are having trouble with contracts via private routes
+
+> Raghav Sood:
+/topup 0x7e2B383181F7342f55Ca971572b90cB86634eb10 5 ETH.USDC private
+
+> Give Wei:
+Asset ETH.USDC not in static list, looking up...
+
+> Give Wei:
+Found: USDC (USDC)
+Contract: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+Available via: thorchain, nearintents
+
+Confirm this token for your $5.00 topup?
+
+> Give Wei:
+Executing swap: $5.00 → ETH.USDC to 0x7e2B383181F7342f55Ca971572b90cB86634eb10...
+
+> Give Wei:
+Quote error: no quotes available for ETH.USDC
+
+USDC is supported by both SimpleSwap and HoudiniSwap, yet its not identified - we shouldn't be using solely static lists. Let's expand our dynamic lookup to cover private routes as well
