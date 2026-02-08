@@ -115,6 +115,47 @@ func (c *Client) CreateExchange(ctx context.Context, from, to, amount, addressTo
 	return &exchange, nil
 }
 
+// Currency represents a supported currency from SimpleSwap.
+type Currency struct {
+	Name            string `json:"name"`
+	Symbol          string `json:"symbol"`
+	Network         string `json:"network"`
+	ContractAddress string `json:"contract_address"`
+	HasExtraID      bool   `json:"has_extra_id"`
+}
+
+// GetAllCurrencies returns all supported currencies from SimpleSwap.
+func (c *Client) GetAllCurrencies(ctx context.Context) ([]Currency, error) {
+	u := fmt.Sprintf("%s/get_all_currencies?api_key=%s", baseURL, c.apiKey)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("simpleswap get_all_currencies: %s: %s", resp.Status, body)
+	}
+
+	var currencies []Currency
+	if err := json.Unmarshal(body, &currencies); err != nil {
+		return nil, fmt.Errorf("parsing currencies response: %w", err)
+	}
+
+	return currencies, nil
+}
+
 // GetExchange retrieves the current status of an exchange.
 func (c *Client) GetExchange(ctx context.Context, id string) (*Exchange, error) {
 	u := fmt.Sprintf("%s/get_exchange?api_key=%s&id=%s", baseURL, c.apiKey, url.QueryEscape(id))

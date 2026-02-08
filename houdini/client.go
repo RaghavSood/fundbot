@@ -66,6 +66,48 @@ type StatusResponse struct {
 	HashURL   string `json:"hashUrl"`
 }
 
+// Currency represents a supported currency from Houdini.
+type Currency struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	Symbol          string `json:"symbol"`
+	Network         string `json:"network"`
+	ContractAddress string `json:"contractAddress"`
+}
+
+// GetCurrencies returns all supported currencies from Houdini.
+func (c *Client) GetCurrencies(ctx context.Context) ([]Currency, error) {
+	u := fmt.Sprintf("%s/tokens", baseURL)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", c.authHeader())
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("houdini tokens: %s: %s", resp.Status, body)
+	}
+
+	var currencies []Currency
+	if err := json.Unmarshal(body, &currencies); err != nil {
+		return nil, fmt.Errorf("parsing currencies response: %w", err)
+	}
+
+	return currencies, nil
+}
+
 // GetMinMax returns the [min, max] amounts (in source token units) for a pair.
 func (c *Client) GetMinMax(ctx context.Context, from, to string, anonymous bool) (min, max float64, err error) {
 	u := fmt.Sprintf("%s/getMinMax?from=%s&to=%s&anonymous=%t&cexOnly=true",

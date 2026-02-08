@@ -91,6 +91,19 @@ func main() {
 	var res *resolver.Resolver
 	if cfg.CoinGeckoAPIKey != "" {
 		res = resolver.New(cfg.CoinGeckoAPIKey, simpleswap.LookupSymbol, houdini.LookupSymbol)
+
+		// Set up dynamic currency lookup for private providers
+		if ssCfg, ok := cfg.Providers["simpleswap"]; ok && ssCfg.APIKey != "" {
+			ssClient := simpleswap.NewClient(ssCfg.APIKey, apilog.NewHTTPClient("simpleswap-resolver", database))
+			res.SetSimpleSwapClient(ssClient)
+		}
+		if hCfg, ok := cfg.Providers["houdini"]; ok && hCfg.APIKey != "" {
+			hClient := houdini.NewClient(hCfg.APIKey, hCfg.APISecret, apilog.NewHTTPClient("houdini-resolver", database))
+			res.SetHoudiniClient(hClient)
+		}
+
+		// Refresh private provider currency lists
+		res.RefreshPrivateProviders(context.Background())
 		log.Println("Token resolver enabled (CoinGecko)")
 	}
 

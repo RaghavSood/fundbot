@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/RaghavSood/fundbot/houdini"
+	"github.com/RaghavSood/fundbot/simpleswap"
 	"github.com/RaghavSood/fundbot/swaps"
 )
 
@@ -33,6 +35,9 @@ type Resolver struct {
 	simpleswapLookup func(key string) (string, bool)
 	// houdiniLookup checks the Houdini static mapping.
 	houdiniLookup func(key string) (string, bool)
+	// Dynamic matchers for private providers
+	simpleswap *simpleswapMatcher
+	houdiniDyn *houdiniMatcher
 }
 
 // New creates a new Resolver.
@@ -43,6 +48,30 @@ func New(cgAPIKey string, simpleswapLookup func(key string) (string, bool), houd
 		near:             newNearMatcher(),
 		simpleswapLookup: simpleswapLookup,
 		houdiniLookup:    houdiniLookup,
+	}
+}
+
+// SetSimpleSwapClient sets the SimpleSwap client for dynamic currency lookup.
+func (r *Resolver) SetSimpleSwapClient(client *simpleswap.Client) {
+	r.simpleswap = newSimpleswapMatcher(client)
+}
+
+// SetHoudiniClient sets the Houdini client for dynamic currency lookup.
+func (r *Resolver) SetHoudiniClient(client *houdini.Client) {
+	r.houdiniDyn = newHoudiniMatcher(client)
+}
+
+// RefreshPrivateProviders refreshes the currency lists from private providers.
+func (r *Resolver) RefreshPrivateProviders(ctx context.Context) {
+	if r.simpleswap != nil {
+		if err := r.simpleswap.refresh(ctx); err != nil {
+			log.Printf("resolver: failed to refresh SimpleSwap currencies: %v", err)
+		}
+	}
+	if r.houdiniDyn != nil {
+		if err := r.houdiniDyn.refresh(ctx); err != nil {
+			log.Printf("resolver: failed to refresh Houdini currencies: %v", err)
+		}
 	}
 }
 
@@ -146,6 +175,23 @@ func (r *Resolver) matchNearIntents(ctx context.Context, asset swaps.Asset, res 
 }
 
 func (r *Resolver) matchSimpleSwap(asset swaps.Asset, res *Resolution) {
+	// Try dynamic lookup first (by contract address from CoinGecko)
+	if r.simpleswap != nil && res.ContractAddress != "" {
+		if sym, ok := r.simpleswap.match(asset.Chain, asset.Symbol, res.ContractAddress); ok {
+			res.Providers = append(res.Providers, ProviderMatch{Provider: "simpleswap", AssetID: sym})
+			return
+		}
+	}
+
+	// Try dynamic lookup by symbol only
+	if r.simpleswap != nil {
+		if sym, ok := r.simpleswap.match(asset.Chain, asset.Symbol, ""); ok {
+			res.Providers = append(res.Providers, ProviderMatch{Provider: "simpleswap", AssetID: sym})
+			return
+		}
+	}
+
+	// Fall back to static lookup
 	if r.simpleswapLookup == nil {
 		return
 	}
@@ -176,6 +222,23 @@ func (r *Resolver) matchSimpleSwap(asset swaps.Asset, res *Resolution) {
 }
 
 func (r *Resolver) matchHoudini(asset swaps.Asset, res *Resolution) {
+	// Try dynamic lookup first (by contract address from CoinGecko)
+	if r.houdiniDyn != nil && res.ContractAddress != "" {
+		if id, ok := r.houdiniDyn.match(asset.Chain, asset.Symbol, res.ContractAddress); ok {
+			res.Providers = append(res.Providers, ProviderMatch{Provider: "houdini", AssetID: id})
+			return
+		}
+	}
+
+	// Try dynamic lookup by symbol only
+	if r.houdiniDyn != nil {
+		if id, ok := r.houdiniDyn.match(asset.Chain, asset.Symbol, ""); ok {
+			res.Providers = append(res.Providers, ProviderMatch{Provider: "houdini", AssetID: id})
+			return
+		}
+	}
+
+	// Fall back to static lookup
 	if r.houdiniLookup == nil {
 		return
 	}
