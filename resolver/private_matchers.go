@@ -72,20 +72,24 @@ func (m *simpleswapMatcher) match(chain, symbol, contractAddr string) (string, b
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	network := normalizeChainToNetwork(chain)
+	networks := normalizeChainToNetworks(chain)
 
-	// Try contract address first
+	// Try contract address first (for each possible network name)
 	if contractAddr != "" {
-		key := network + ":" + strings.ToLower(contractAddr)
-		if sym, ok := m.byContract[key]; ok {
-			return sym, true
+		for _, network := range networks {
+			key := network + ":" + strings.ToLower(contractAddr)
+			if sym, ok := m.byContract[key]; ok {
+				return sym, true
+			}
 		}
 	}
 
-	// Try symbol
-	key := network + ":" + strings.ToLower(symbol)
-	if sym, ok := m.bySymbol[key]; ok {
-		return sym, true
+	// Try symbol (for each possible network name)
+	for _, network := range networks {
+		key := network + ":" + strings.ToLower(symbol)
+		if sym, ok := m.bySymbol[key]; ok {
+			return sym, true
+		}
 	}
 
 	return "", false
@@ -153,46 +157,53 @@ func (m *houdiniMatcher) match(chain, symbol, contractAddr string) (string, bool
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	network := normalizeChainToNetwork(chain)
+	networks := normalizeChainToNetworks(chain)
 
-	// Try contract address first
+	// Try contract address first (for each possible network name)
 	if contractAddr != "" {
-		key := network + ":" + strings.ToLower(contractAddr)
-		if id, ok := m.byContract[key]; ok {
-			return id, true
+		for _, network := range networks {
+			key := network + ":" + strings.ToLower(contractAddr)
+			if id, ok := m.byContract[key]; ok {
+				return id, true
+			}
 		}
 	}
 
-	// Try symbol
-	key := network + ":" + strings.ToLower(symbol)
-	if id, ok := m.bySymbol[key]; ok {
-		return id, true
+	// Try symbol (for each possible network name)
+	for _, network := range networks {
+		key := network + ":" + strings.ToLower(symbol)
+		if id, ok := m.bySymbol[key]; ok {
+			return id, true
+		}
 	}
 
 	return "", false
 }
 
-// normalizeChainToNetwork converts our chain notation to exchange network names.
-func normalizeChainToNetwork(chain string) string {
+// normalizeChainToNetwork converts our chain notation to possible exchange network names.
+// Returns a slice since exchanges may use different names for the same chain.
+func normalizeChainToNetworks(chain string) []string {
 	chain = strings.ToLower(chain)
 	switch chain {
 	case "eth", "ethereum":
-		return "eth"
+		return []string{"eth", "ethereum", "erc20"}
 	case "avax", "avalanche":
-		return "avaxc"
+		return []string{"avaxc", "avalanche", "avax"}
 	case "base":
-		return "base"
+		return []string{"base"}
 	case "bsc", "binance":
-		return "bsc"
+		return []string{"bsc", "bep20", "binance", "bnb"}
 	case "arb", "arbitrum":
-		return "arb"
+		return []string{"arb", "arbitrum"}
 	case "polygon", "matic":
-		return "polygon"
+		return []string{"polygon", "matic"}
 	case "sol", "solana":
-		return "sol"
+		return []string{"sol", "solana"}
 	case "btc", "bitcoin":
-		return "btc"
+		return []string{"btc", "bitcoin"}
+	case "tron", "trx":
+		return []string{"tron", "trx", "trc20"}
 	default:
-		return chain
+		return []string{chain}
 	}
 }
