@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -227,24 +226,9 @@ func transferERC20(ctx context.Context, rpc *ethclient.Client, chainID *big.Int,
 		return "", err
 	}
 
-	nonce, err := rpc.PendingNonceAt(ctx, from)
+	signedTx, err := swaps.SignAndBroadcast(ctx, rpc, chainID, key, token, big.NewInt(0), 100000, data, "Houdini USDC transfer")
 	if err != nil {
-		return "", fmt.Errorf("getting nonce: %w", err)
-	}
-
-	gasPrice, err := rpc.SuggestGasPrice(ctx)
-	if err != nil {
-		return "", fmt.Errorf("getting gas price: %w", err)
-	}
-
-	tx := types.NewTransaction(nonce, token, big.NewInt(0), 100000, gasPrice, data)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), key)
-	if err != nil {
-		return "", fmt.Errorf("signing transfer tx: %w", err)
-	}
-
-	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
-		return "", fmt.Errorf("sending transfer tx: %w", err)
+		return "", err
 	}
 
 	log.Printf("Houdini USDC transfer sent: %s", signedTx.Hash().Hex())

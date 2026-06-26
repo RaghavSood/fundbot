@@ -115,10 +115,10 @@ func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount flo
 			VaultAddress:      quoteResp.InboundAddress,
 			Expiry:            quoteResp.Expiry,
 			ExtraData: map[string]interface{}{
-				"fees":              quoteResp.Fees,
-				"recommended_min":   quoteResp.RecommendedMinIn,
-				"gas_rate":          quoteResp.RecommendedGasRate,
-				"outbound_delay_s":  quoteResp.OutboundDelaySecs,
+				"fees":             quoteResp.Fees,
+				"recommended_min":  quoteResp.RecommendedMinIn,
+				"gas_rate":         quoteResp.RecommendedGasRate,
+				"outbound_delay_s": quoteResp.OutboundDelaySecs,
 			},
 		})
 	}
@@ -175,24 +175,9 @@ func (p *Provider) approveERC20(ctx context.Context, rpc *ethclient.Client, chai
 		return err
 	}
 
-	nonce, err := rpc.PendingNonceAt(ctx, from)
+	signedTx, err := swaps.SignAndBroadcast(ctx, rpc, chainID, key, token, big.NewInt(0), 100000, data, "Thorchain approve")
 	if err != nil {
-		return fmt.Errorf("getting nonce: %w", err)
-	}
-
-	gasPrice, err := rpc.SuggestGasPrice(ctx)
-	if err != nil {
-		return fmt.Errorf("getting gas price: %w", err)
-	}
-
-	tx := types.NewTransaction(nonce, token, big.NewInt(0), 100000, gasPrice, data)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), key)
-	if err != nil {
-		return fmt.Errorf("signing approve tx: %w", err)
-	}
-
-	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
-		return fmt.Errorf("sending approve tx: %w", err)
+		return err
 	}
 
 	log.Printf("Approve tx sent: %s", signedTx.Hash().Hex())
@@ -229,25 +214,10 @@ func (p *Provider) depositWithExpiry(ctx context.Context, rpc *ethclient.Client,
 		return "", fmt.Errorf("packing deposit: %w", err)
 	}
 
-	nonce, err := rpc.PendingNonceAt(ctx, from)
-	if err != nil {
-		return "", fmt.Errorf("getting nonce: %w", err)
-	}
-
-	gasPrice, err := rpc.SuggestGasPrice(ctx)
-	if err != nil {
-		return "", fmt.Errorf("getting gas price: %w", err)
-	}
-
 	// ERC20 deposit: value is 0 (tokens transferred via approve+transferFrom)
-	tx := types.NewTransaction(nonce, router, big.NewInt(0), 200000, gasPrice, data)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), key)
+	signedTx, err := swaps.SignAndBroadcast(ctx, rpc, chainID, key, router, big.NewInt(0), 200000, data, "Thorchain deposit")
 	if err != nil {
-		return "", fmt.Errorf("signing deposit tx: %w", err)
-	}
-
-	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
-		return "", fmt.Errorf("sending deposit tx: %w", err)
+		return "", err
 	}
 
 	log.Printf("Deposit tx sent: %s", signedTx.Hash().Hex())

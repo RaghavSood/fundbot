@@ -13,7 +13,6 @@ import (
 	oneclick "github.com/defuse-protocol/one-click-sdk-go"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -100,18 +99,18 @@ func (p *Provider) Quote(ctx context.Context, toAsset swaps.Asset, usdAmount flo
 		deadline := time.Now().Add(60 * time.Minute)
 
 		quoteReq := *oneclick.NewQuoteRequest(
-			false,          // dry
-			"EXACT_INPUT",  // swapType
-			100,            // slippageTolerance (1%)
-			sourceTokenID,  // originAsset
-			"ORIGIN_CHAIN", // depositType
-			destTokenID,    // destinationAsset
-			amount,         // amount
-			sender.Hex(),   // refundTo
-			"ORIGIN_CHAIN", // refundType
-			destination,    // recipient
+			false,               // dry
+			"EXACT_INPUT",       // swapType
+			100,                 // slippageTolerance (1%)
+			sourceTokenID,       // originAsset
+			"ORIGIN_CHAIN",      // depositType
+			destTokenID,         // destinationAsset
+			amount,              // amount
+			sender.Hex(),        // refundTo
+			"ORIGIN_CHAIN",      // refundType
+			destination,         // recipient
 			"DESTINATION_CHAIN", // recipientType
-			deadline,       // deadline
+			deadline,            // deadline
 		)
 		depositMode := "SIMPLE"
 		quoteReq.DepositMode = &depositMode
@@ -225,24 +224,9 @@ func transferERC20(ctx context.Context, rpc *ethclient.Client, chainID *big.Int,
 		return "", err
 	}
 
-	nonce, err := rpc.PendingNonceAt(ctx, from)
+	signedTx, err := swaps.SignAndBroadcast(ctx, rpc, chainID, key, token, big.NewInt(0), 100000, data, "Near Intents USDC transfer")
 	if err != nil {
-		return "", fmt.Errorf("getting nonce: %w", err)
-	}
-
-	gasPrice, err := rpc.SuggestGasPrice(ctx)
-	if err != nil {
-		return "", fmt.Errorf("getting gas price: %w", err)
-	}
-
-	tx := types.NewTransaction(nonce, token, big.NewInt(0), 100000, gasPrice, data)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), key)
-	if err != nil {
-		return "", fmt.Errorf("signing transfer tx: %w", err)
-	}
-
-	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
-		return "", fmt.Errorf("sending transfer tx: %w", err)
+		return "", err
 	}
 
 	log.Printf("Near Intents USDC transfer sent: %s", signedTx.Hash().Hex())
