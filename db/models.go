@@ -86,6 +86,20 @@ type Topup struct {
 	ExternalID string
 }
 
+type TreasuryLedger struct {
+	ID             int64
+	Direction      string
+	Kind           string
+	Chain          string
+	AmountUsdc     int64
+	TxHash         string
+	DepositAddress string
+	TopupID        sql.NullInt64
+	Status         string
+	Note           string
+	CreatedAt      sql.NullTime
+}
+
 type User struct {
 	ID         int64
 	TelegramID int64

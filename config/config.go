@@ -11,6 +11,18 @@ type ProviderConfig struct {
 	APISecret string `json:"api_secret"`
 }
 
+// TreasuryConfig controls the service-level Near Intents treasury used for
+// confidential swaps. The treasury key is derived from the bot mnemonic at
+// m/44'/60'/1'/0/0. Requires providers.nearintents.api_key.
+type TreasuryConfig struct {
+	// Enabled turns on the confidential swap provider and admin treasury panel.
+	Enabled bool `json:"enabled"`
+
+	// MinConfidentialBufferUSD is the buffer (in USD) kept above the quoted
+	// amount when checking whether the confidential balance can fund a swap.
+	MinConfidentialBufferUSD float64 `json:"min_confidential_buffer_usd"`
+}
+
 type Mode string
 
 const (
@@ -52,6 +64,9 @@ type Config struct {
 
 	// HTTP server port (default 8080)
 	Port int `json:"port"`
+
+	// Treasury settings for the service-level Near Intents account.
+	Treasury TreasuryConfig `json:"treasury"`
 
 	// Optional password to protect the dashboard; empty = public
 	DashboardPassword string `json:"dashboard_password"`
