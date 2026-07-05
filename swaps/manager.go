@@ -62,10 +62,26 @@ func (m *Manager) BestQuote(ctx context.Context, toAsset Asset, usdAmount float6
 	return best, nil
 }
 
+// privateCategories are provider categories that must never be selected by
+// default routing or by a generic category hint. They are opt-in only, via an
+// explicit provider-name hint (e.g. "hanon", "nconf").
+var privateCategories = map[string]bool{
+	"anon-private": true,
+}
+
 // filterProviders returns the subset of providers matching the routing hint.
+// Providers in a private category are excluded unless the hint names them
+// directly by provider name.
 func (m *Manager) filterProviders(hint RoutingHint) ([]Provider, error) {
 	if hint.Type == "" {
-		return m.providers, nil
+		var filtered []Provider
+		for _, p := range m.providers {
+			if privateCategories[p.Category()] {
+				continue
+			}
+			filtered = append(filtered, p)
+		}
+		return filtered, nil
 	}
 
 	var filtered []Provider
@@ -76,6 +92,10 @@ func (m *Manager) filterProviders(hint RoutingHint) ([]Provider, error) {
 				filtered = append(filtered, p)
 			}
 		case "category":
+			// A generic category hint must not reach private providers.
+			if privateCategories[hint.Value] {
+				continue
+			}
 			if p.Category() == hint.Value {
 				filtered = append(filtered, p)
 			}

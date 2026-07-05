@@ -16,6 +16,8 @@ import (
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/houdini"
+	"github.com/RaghavSood/fundbot/intents"
+	"github.com/RaghavSood/fundbot/nearconf"
 	"github.com/RaghavSood/fundbot/nearintents"
 	"github.com/RaghavSood/fundbot/resolver"
 	"github.com/RaghavSood/fundbot/server"
@@ -23,6 +25,8 @@ import (
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/tracker"
+	"github.com/RaghavSood/fundbot/treasury"
+	"github.com/RaghavSood/fundbot/wallet"
 )
 
 func main() {
@@ -78,6 +82,28 @@ func main() {
 		hanonProvider := houdini.NewAnonProvider(hCfg.APIKey, hCfg.APISecret, rpcClients, hHTTP)
 		providers = append(providers, hanonProvider)
 		log.Println("Houdini anonymous provider enabled")
+	}
+
+	// Initialize the service-level treasury and confidential swap provider.
+	// Requires the nearintents API key (shared 1-Click credential) plus
+	// treasury.enabled. The treasury key is derived at m/44'/60'/1'/0/0.
+	var treas *treasury.Treasury
+	if cfg.Treasury.Enabled {
+		niCfg, ok := cfg.Providers["nearintents"]
+		if !ok || niCfg.APIKey == "" {
+			log.Fatal("treasury.enabled requires providers.nearintents.api_key")
+		}
+		treasuryKey, err := wallet.DeriveTreasuryKey(cfg.Mnemonic)
+		if err != nil {
+			log.Fatalf("Failed to derive treasury key: %v", err)
+		}
+		intentsClient := intents.NewClient(niCfg.APIKey, treasuryKey, apilog.NewHTTPClient("intents", database))
+		treas = treasury.New(treasuryKey, intentsClient, rpcClients, database)
+		log.Printf("Treasury enabled (account %s)", treas.Address().Hex())
+
+		confProvider := nearconf.NewProvider(treas, rpcClients, cfg.Treasury.MinConfidentialBufferUSD)
+		providers = append(providers, confProvider)
+		log.Println("Near Intents confidential provider enabled")
 	}
 
 	// Initialize swap manager

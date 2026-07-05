@@ -213,3 +213,66 @@ func (p *Provider) Execute(ctx context.Context, quote swaps.Quote, privateKey *e
 		DestinationAsset: destToken,
 		Amount:           quote.InputAmount.String(),
 		DepositType:      intents.TypeConfidentialIntents,
+		Recipient:        destination,
+		RecipientType:    intents.TypeDestinationChain,
+		RefundTo:         p.treasury.Client().SignerID(),
+		RefundType:       intents.TypeConfidentialIntents,
+	})
+	if err != nil {
+		// The user has paid the treasury but we couldn't quote the outbound
+		// swap. Surface the tx hash so the payment is reconcilable; the topup
+		// is marked failed and flagged for manual refund from treasury.
+		return swaps.ExecuteResult{TxHash: txHash}, fmt.Errorf("nearconf leg-2 quote (user paid %s): %w", txHash, err)
+	}
+	if q.DepositAddress == "" {
+		return swaps.ExecuteResult{TxHash: txHash}, fmt.Errorf("nearconf leg-2 quote returned no deposit address (user paid %s)", txHash)
+	}
+
+	if _, err := p.treasury.Client().ExecuteFromBalance(ctx, q.DepositAddress); err != nil {
+		return swaps.ExecuteResult{TxHash: txHash}, fmt.Errorf("nearconf leg-2 intent (user paid %s): %w", txHash, err)
+	}
+	p.treasury.RecordConfidentialSwap(ctx, quote.FromChain, quote.InputAmount, q.DepositAddress, 0)
+	log.Printf("nearconf: confidential swap submitted, deposit address %s", q.DepositAddress)
+
+	// ExternalID is the leg-2 deposit address: the 1-Click status poll key
+	// that tracks delivery of the swap output to the user's destination.
+	return swaps.ExecuteResult{
+		TxHash:     txHash,
+		ExternalID: q.DepositAddress,
+	}, nil
+}
+
+// CheckStatus reports the state of the confidential swap (leg 2). externalID
+// is the leg-2 deposit address. Leg 1 (the user payment) is assumed good once
+// broadcast; a balance-checked ERC20 transfer to the treasury effectively
+// cannot fail at gas-topup sizes.
+func (p *Provider) CheckStatus(ctx context.Context, txHash string, externalID string) (string, error) {
+	if externalID == "" {
+		return "pending", nil
+	}
+	status, err := p.treasury.Client().Status(ctx, externalID)
+	if err != nil {
+		return "", fmt.Errorf("nearconf get status: %w", err)
+	}
+	switch status {
+	case "SUCCESS":
+		return "completed", nil
+	case "FAILED", "REFUNDED":
+		return "failed", nil
+	default:
+		return "pending", nil
+	}
+}
+
+func usdcAsset(chain string) swaps.Asset {
+	switch chain {
+	case "avalanche":
+		a, _ := swaps.ParseAsset("AVAX.USDC-0xB97EF9Ef8734C71904D8002F8B6BC66Dd9c48a6E")
+		return a
+	case "base":
+		a, _ := swaps.ParseAsset("BASE.USDC-0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
+		return a
+	default:
+		return swaps.Asset{Chain: strings.ToUpper(chain), Symbol: "USDC"}
+	}
+}

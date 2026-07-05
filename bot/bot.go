@@ -297,6 +297,7 @@ func (b *Bot) handleStart(msg *tgbotapi.Message) {
 		"`near` - DEX, intent-based (Near Intents)\n" +
 		"`houdini` - Private, CEX-routed\n" +
 		"`hanon` - Private, anonymous routing\n" +
+		"`nconf` - Confidential (Near Confidential Intents, TEE-shielded)\n" +
 		"`dex` - Any DEX provider\n" +
 		"`private` - Any private/custodial provider\n" +
 		"Omit for best price across all providers."
@@ -326,6 +327,7 @@ var validHints = map[string]swaps.RoutingHint{
 	"near":       {Type: "provider", Value: "nearintents"},
 	"houdini":    {Type: "provider", Value: "houdini"},
 	"hanon":      {Type: "provider", Value: "houdini-anon"},
+	"nconf":      {Type: "provider", Value: "nearintents-confidential"},
 	"dex":        {Type: "category", Value: "dex"},
 	"private":    {Type: "category", Value: "private"},
 }
@@ -335,7 +337,7 @@ var validHints = map[string]swaps.RoutingHint{
 func parseSwapArgs(args string) (destination string, usdAmount float64, asset swaps.Asset, hint swaps.RoutingHint, err error) {
 	fields := strings.Fields(args)
 	if len(fields) < 3 || len(fields) > 4 {
-		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET> [thorchain|simpleswap|near|houdini|hanon|dex|private]")
+		err = fmt.Errorf("usage: <address> <amount> <CHAIN.ASSET> [thorchain|simpleswap|near|houdini|hanon|nconf|dex|private]")
 		return
 	}
 
@@ -360,7 +362,7 @@ func parseSwapArgs(args string) (destination string, usdAmount float64, asset sw
 	if len(fields) == 4 {
 		h, ok := validHints[strings.ToLower(fields[3])]
 		if !ok {
-			err = fmt.Errorf("unknown routing hint %q (use thorchain, simpleswap, near, houdini, hanon, dex, or private)", fields[3])
+			err = fmt.Errorf("unknown routing hint %q (use thorchain, simpleswap, near, houdini, hanon, nconf, dex, or private)", fields[3])
 			return
 		}
 		hint = h

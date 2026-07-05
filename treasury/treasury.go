@@ -39,17 +39,17 @@ type Treasury struct {
 	address    common.Address
 	client     *intents.Client
 	rpcClients map[string]*ethclient.Client
-	queries    *db.Queries
+	store      *db.Store
 }
 
 // New creates a Treasury. client must be constructed with the same key.
-func New(key *ecdsa.PrivateKey, client *intents.Client, rpcClients map[string]*ethclient.Client, queries *db.Queries) *Treasury {
+func New(key *ecdsa.PrivateKey, client *intents.Client, rpcClients map[string]*ethclient.Client, store *db.Store) *Treasury {
 	return &Treasury{
 		key:        key,
 		address:    crypto.PubkeyToAddress(key.PublicKey),
 		client:     client,
 		rpcClients: rpcClients,
-		queries:    queries,
+		store:      store,
 	}
 }
 
@@ -189,7 +189,7 @@ func (t *Treasury) DepositToIntents(ctx context.Context, chain string, amount *b
 		log.Printf("treasury: submit deposit tx (non-fatal): %v", err)
 	}
 
-	id, err := t.queries.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
+	id, err := t.store.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
 		Direction:      "out",
 		Kind:           "intents_deposit",
 		Chain:          chain,
@@ -237,7 +237,7 @@ func (t *Treasury) Shield(ctx context.Context, chain string, amount *big.Int) (i
 		return 0, "", fmt.Errorf("executing shield intent: %w", err)
 	}
 
-	id, err := t.queries.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
+	id, err := t.store.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
 		Direction:      "out",
 		Kind:           "shield",
 		Chain:          chain,
@@ -255,7 +255,7 @@ func (t *Treasury) Shield(ctx context.Context, chain string, amount *big.Int) (i
 
 // RecordUserPayment records an inbound user USDC payment to the treasury.
 func (t *Treasury) RecordUserPayment(ctx context.Context, chain string, amount *big.Int, txHash string, topupID int64) {
-	_, err := t.queries.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
+	_, err := t.store.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
 		Direction:  "in",
 		Kind:       "user_payment",
 		Chain:      chain,
@@ -273,7 +273,7 @@ func (t *Treasury) RecordUserPayment(ctx context.Context, chain string, amount *
 // RecordConfidentialSwap records an outbound confidential swap funded from
 // the confidential balance.
 func (t *Treasury) RecordConfidentialSwap(ctx context.Context, chain string, amount *big.Int, depositAddress string, topupID int64) {
-	_, err := t.queries.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
+	_, err := t.store.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
 		Direction:      "out",
 		Kind:           "confidential_swap",
 		Chain:          chain,
