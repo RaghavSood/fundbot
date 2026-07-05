@@ -288,6 +288,48 @@ func (t *Treasury) RecordConfidentialSwap(ctx context.Context, chain string, amo
 	}
 }
 
+// ReconcilePending polls 1-Click status for pending treasury ledger ops
+// (intents deposits, shields, confidential swaps that carry a deposit address)
+// and marks them completed/failed. Confidential swaps linked to a user topup
+// are also tracked by the swap tracker; reconciling them here keeps the
+// ledger's own status column accurate.
+func (t *Treasury) ReconcilePending(ctx context.Context) {
+	ops, err := t.store.ListPendingTreasuryOps(ctx)
+	if err != nil {
+		log.Printf("treasury: error listing pending ops: %v", err)
+		return
+	}
+	for _, op := range ops {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		status, err := t.client.Status(ctx, op.DepositAddress)
+		if err != nil {
+			log.Printf("treasury: status check for ledger %d (%s): %v", op.ID, op.DepositAddress, err)
+			continue
+		}
+		var newStatus string
+		switch status {
+		case "SUCCESS":
+			newStatus = "completed"
+		case "FAILED", "REFUNDED":
+			newStatus = "failed"
+		default:
+			continue
+		}
+		if err := t.store.UpdateTreasuryLedgerStatus(ctx, db.UpdateTreasuryLedgerStatusParams{
+			Status: newStatus,
+			ID:     op.ID,
+		}); err != nil {
+			log.Printf("treasury: error updating ledger %d: %v", op.ID, err)
+			continue
+		}
+		log.Printf("treasury: ledger %d (%s) -> %s", op.ID, op.Kind, newStatus)
+	}
+}
+
 func usdcTokenIDs() []string {
 	chains := nearintents.SupportedSourceChains()
 	ids := make([]string, 0, len(chains))

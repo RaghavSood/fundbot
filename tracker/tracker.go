@@ -13,6 +13,7 @@ import (
 	"github.com/RaghavSood/fundbot/cowswap"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/swaps"
+	"github.com/RaghavSood/fundbot/treasury"
 )
 
 type Tracker struct {
@@ -20,15 +21,17 @@ type Tracker struct {
 	store     *db.Store
 	swapMgr   *swaps.Manager
 	cowClient *cowswap.Client
+	treasury  *treasury.Treasury // optional; nil when the confidential rail is disabled
 	botAPI    *tgbotapi.BotAPI
 }
 
-func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, cowClient *cowswap.Client, botAPI *tgbotapi.BotAPI) *Tracker {
+func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, cowClient *cowswap.Client, treas *treasury.Treasury, botAPI *tgbotapi.BotAPI) *Tracker {
 	return &Tracker{
 		cfg:       cfg,
 		store:     store,
 		swapMgr:   swapMgr,
 		cowClient: cowClient,
+		treasury:  treas,
 		botAPI:    botAPI,
 	}
 }
@@ -54,6 +57,9 @@ func (t *Tracker) Run(ctx context.Context) {
 func (t *Tracker) poll(ctx context.Context) {
 	t.pollTopups(ctx)
 	t.pollGasRefills(ctx)
+	if t.treasury != nil {
+		t.treasury.ReconcilePending(ctx)
+	}
 }
 
 func (t *Tracker) pollTopups(ctx context.Context) {
