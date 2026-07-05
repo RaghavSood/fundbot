@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -36,12 +37,22 @@ func New(cfg *config.Config, store *db.Store, swapMgr *swaps.Manager, cowClient 
 	}
 }
 
+// apiRequestRetention is how long non-essential api_requests rows are kept.
+// Swap-creating POSTs and completion-confirming status responses are retained
+// beyond this; see queries/api_requests_prune.sql.
+const apiRequestRetention = 7 * 24 * time.Hour
+
 func (t *Tracker) Run(ctx context.Context) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
+	// Prune api_requests once per day.
+	maintenance := time.NewTicker(24 * time.Hour)
+	defer maintenance.Stop()
+
 	// Run once immediately on start
 	t.poll(ctx)
+	t.pruneAPIRequests(ctx)
 
 	for {
 		select {
@@ -50,6 +61,26 @@ func (t *Tracker) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			t.poll(ctx)
+		case <-maintenance.C:
+			t.pruneAPIRequests(ctx)
+		}
+	}
+}
+
+// pruneAPIRequests deletes non-essential api_requests rows older than the
+// retention window, then reclaims free pages if the database uses incremental
+// auto-vacuum (a no-op otherwise).
+func (t *Tracker) pruneAPIRequests(ctx context.Context) {
+	cutoff := time.Now().UTC().Add(-apiRequestRetention)
+	n, err := t.store.PruneAPIRequests(ctx, sql.NullTime{Time: cutoff, Valid: true})
+	if err != nil {
+		log.Printf("Tracker: error pruning api_requests: %v", err)
+		return
+	}
+	if n > 0 {
+		log.Printf("Tracker: pruned %d api_requests rows older than %s", n, cutoff.Format(time.RFC3339))
+		if err := t.store.IncrementalVacuum(ctx); err != nil {
+			log.Printf("Tracker: incremental_vacuum: %v", err)
 		}
 	}
 }

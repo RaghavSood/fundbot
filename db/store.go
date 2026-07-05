@@ -47,6 +47,16 @@ func (s *Store) Close() error {
 	return s.conn.Close()
 }
 
+// IncrementalVacuum reclaims free pages to the OS. It only has an effect when
+// the database was created with auto_vacuum=INCREMENTAL; otherwise it is a
+// harmless no-op. A full one-time VACUUM (offline, needs free disk equal to
+// the DB size) is required to compact a database that grew under
+// auto_vacuum=NONE.
+func (s *Store) IncrementalVacuum(ctx context.Context) error {
+	_, err := s.conn.ExecContext(ctx, "PRAGMA incremental_vacuum;")
+	return err
+}
+
 // GetOrCreateUser returns the user for a telegram ID, creating one if needed.
 func (s *Store) GetOrCreateUser(ctx context.Context, telegramID int64, username string) (User, error) {
 	user, err := s.GetUserByTelegramID(ctx, telegramID)
