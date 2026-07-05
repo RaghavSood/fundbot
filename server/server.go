@@ -21,6 +21,7 @@ import (
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/db"
 	"github.com/RaghavSood/fundbot/thorchain"
+	"github.com/RaghavSood/fundbot/treasury"
 	"github.com/RaghavSood/fundbot/wallet"
 )
 
@@ -38,13 +39,15 @@ type Server struct {
 	cfg        *config.Config
 	store      *db.Store
 	rpcClients map[string]*ethclient.Client
+	treasury   *treasury.Treasury // optional; nil when the confidential rail is disabled
 }
 
-func New(cfg *config.Config, store *db.Store, rpcClients map[string]*ethclient.Client) *Server {
+func New(cfg *config.Config, store *db.Store, rpcClients map[string]*ethclient.Client, treas *treasury.Treasury) *Server {
 	return &Server{
 		cfg:        cfg,
 		store:      store,
 		rpcClients: rpcClients,
+		treasury:   treas,
 	}
 }
 
@@ -84,6 +87,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/export-key", s.withAdminAuth(s.handleExportKey))
 	mux.HandleFunc("/api/admin/api-logs", s.withAdminAuth(s.handleAdminAPILogs))
 	mux.HandleFunc("/api/admin/api-log/", s.withAdminAuth(s.handleAdminAPILogDetail))
+	mux.HandleFunc("/api/admin/treasury", s.withAdminAuth(s.handleAdminTreasury))
+	mux.HandleFunc("/api/admin/treasury/deposit", s.withAdminAuth(s.handleAdminTreasuryDeposit))
+	mux.HandleFunc("/api/admin/treasury/shield", s.withAdminAuth(s.handleAdminTreasuryShield))
 	mux.HandleFunc("/api/explorers", s.withDashAuth(s.handleExplorers))
 
 	addr := fmt.Sprintf(":%d", s.cfg.Port)

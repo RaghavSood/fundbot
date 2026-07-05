@@ -26,6 +26,7 @@
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-white border-blue-500" data-tab="transactions">Transactions</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="users">Users</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="balances">Balances</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="treasury">Treasury</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="apilogs">API Logs</button>
       <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 transition text-gray-500 border-transparent hover:text-gray-300" data-tab="export">Export Key</button>
     </div>
@@ -83,6 +84,84 @@
             <tr><td colspan="6" class="px-3 py-4 text-center text-gray-500 italic">Click refresh to load balances.</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Treasury -->
+    <div class="tab-content hidden" id="tab-treasury">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-200">Near Intents Treasury</h2>
+        <button onclick="loadTreasury()" class="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 transition cursor-pointer">&#x21bb; Refresh</button>
+      </div>
+
+      <div id="treasury-disabled" class="hidden rounded-lg border border-gray-800 bg-gray-900 p-6 text-sm text-gray-400">
+        Treasury is not enabled. Set <code class="text-blue-400">treasury.enabled</code> in config and provide <code class="text-blue-400">providers.nearintents.api_key</code>.
+      </div>
+
+      <div id="treasury-panel" class="hidden space-y-6">
+        <div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
+          <p class="text-xs text-gray-500">Service account (signer + EVM treasury address)</p>
+          <code id="treasury-account" class="text-sm text-blue-400 break-all"></code>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-2">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">On-chain USDC (EVM float)</h3>
+            <div class="rounded-lg border border-gray-800 bg-gray-900 overflow-hidden">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-gray-950/60 text-gray-500"><tr><th class="px-3 py-2">Chain</th><th class="px-3 py-2 text-right">USDC</th></tr></thead>
+                <tbody id="treasury-evm-body" class="divide-y divide-gray-800/60"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">Intents balances</h3>
+            <div class="rounded-lg border border-gray-800 bg-gray-900 overflow-hidden">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-gray-950/60 text-gray-500"><tr><th class="px-3 py-2">Chain</th><th class="px-3 py-2 text-right">Public</th><th class="px-3 py-2 text-right">Confidential</th></tr></thead>
+                <tbody id="treasury-intents-body" class="divide-y divide-gray-800/60"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-2">
+          <div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Fund intents (EVM &rarr; public balance)</h3>
+            <div class="flex flex-wrap items-end gap-2">
+              <label class="text-xs text-gray-500">Chain
+                <select id="deposit-chain" class="mt-1 block rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200"><option value="base">base</option><option value="avalanche">avalanche</option></select>
+              </label>
+              <label class="text-xs text-gray-500">USD
+                <input id="deposit-usd" type="number" min="1" step="1" value="25" class="mt-1 block w-24 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
+              </label>
+              <button onclick="treasuryOp('deposit')" class="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition">Deposit</button>
+            </div>
+          </div>
+          <div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Shield (public &rarr; confidential)</h3>
+            <div class="flex flex-wrap items-end gap-2">
+              <label class="text-xs text-gray-500">Chain
+                <select id="shield-chain" class="mt-1 block rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200"><option value="base">base</option><option value="avalanche">avalanche</option></select>
+              </label>
+              <label class="text-xs text-gray-500">USD
+                <input id="shield-usd" type="number" min="1" step="1" value="20" class="mt-1 block w-24 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
+              </label>
+              <button onclick="treasuryOp('shield')" class="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition">Shield</button>
+            </div>
+          </div>
+        </div>
+        <div id="treasury-msg" class="hidden text-xs rounded-md px-3 py-2"></div>
+
+        <div>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">Ledger</h3>
+          <div class="rounded-lg border border-gray-800 bg-gray-900 overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-950/60 text-gray-500"><tr><th class="px-3 py-2">Time</th><th class="px-3 py-2">Dir</th><th class="px-3 py-2">Kind</th><th class="px-3 py-2">Chain</th><th class="px-3 py-2 text-right">USDC</th><th class="px-3 py-2">Status</th><th class="px-3 py-2">Ref</th></tr></thead>
+              <tbody id="treasury-ledger-body" class="divide-y divide-gray-800/60"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -334,18 +413,94 @@
     let apilogsLoaded = false;
     document.querySelector('[data-tab="apilogs"]').addEventListener('click', () => { if (!apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); } });
 
+    // Treasury
+    let treasuryLoaded = false;
+    function loadTreasury() {
+      fetch('/api/admin/treasury')
+        .then(r => r.json())
+        .then(d => {
+          const disabled = document.getElementById('treasury-disabled');
+          const panel = document.getElementById('treasury-panel');
+          if (!d || !d.enabled) {
+            disabled.classList.remove('hidden');
+            panel.classList.add('hidden');
+            return;
+          }
+          disabled.classList.add('hidden');
+          panel.classList.remove('hidden');
+          document.getElementById('treasury-account').textContent = d.account || '';
+
+          const evm = document.getElementById('treasury-evm-body');
+          evm.innerHTML = (d.evm || []).map(b => `<tr><td class="px-3 py-2">${b.chain}</td><td class="px-3 py-2 text-right font-mono">${b.usdc}</td></tr>`).join('')
+            || '<tr><td colspan="2" class="px-3 py-3 text-center text-gray-500">No balances.</td></tr>';
+
+          const it = document.getElementById('treasury-intents-body');
+          it.innerHTML = (d.intents || []).map(b => `<tr><td class="px-3 py-2">${b.chain}</td><td class="px-3 py-2 text-right font-mono">${b.public}</td><td class="px-3 py-2 text-right font-mono text-indigo-300">${b.confidential}</td></tr>`).join('')
+            || '<tr><td colspan="3" class="px-3 py-3 text-center text-gray-500">No balances.</td></tr>';
+
+          const lb = document.getElementById('treasury-ledger-body');
+          const rows = d.ledger || [];
+          lb.innerHTML = rows.length ? rows.map(r => {
+            const ref = r.TxHash ? txCell(r.TxHash, r.Chain) : (r.DepositAddress ? addrCell(r.DepositAddress) : '');
+            const usdc = (Number(r.AmountUsdc || 0) / 1e6).toFixed(6);
+            const dir = r.Direction === 'in' ? '<span class="text-emerald-400">in</span>' : '<span class="text-amber-400">out</span>';
+            const ts = r.CreatedAt && r.CreatedAt.Valid !== undefined ? (r.CreatedAt.Valid ? r.CreatedAt.Time : null) : r.CreatedAt;
+            return `<tr class="hover:bg-gray-900/50">
+              <td class="px-3 py-2 text-gray-500">${ts ? new Date(ts).toLocaleString() : ''}</td>
+              <td class="px-3 py-2">${dir}</td>
+              <td class="px-3 py-2">${r.Kind}</td>
+              <td class="px-3 py-2">${r.Chain || ''}</td>
+              <td class="px-3 py-2 text-right font-mono">${usdc}</td>
+              <td class="px-3 py-2">${statusBadge(r.Status)}</td>
+              <td class="px-3 py-2">${ref}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="7" class="px-3 py-4 text-center text-gray-500">No ledger entries.</td></tr>';
+        })
+        .catch(() => {});
+    }
+
+    function treasuryMsg(text, ok) {
+      const el = document.getElementById('treasury-msg');
+      el.textContent = text;
+      el.className = 'text-xs rounded-md px-3 py-2 ' + (ok ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-red-950 text-red-300 border border-red-800');
+      el.classList.remove('hidden');
+    }
+
+    function treasuryOp(op) {
+      const chain = document.getElementById(op + '-chain').value;
+      const usd = parseFloat(document.getElementById(op + '-usd').value);
+      if (!(usd > 0)) { treasuryMsg('Enter a positive USD amount.', false); return; }
+      if (!confirm(`${op === 'deposit' ? 'Deposit' : 'Shield'} $${usd} on ${chain}?`)) return;
+      treasuryMsg('Submitting…', true);
+      fetch('/api/admin/treasury/' + op, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chain, usd })
+      }).then(async r => {
+        const txt = await r.text();
+        if (!r.ok) { treasuryMsg('Error: ' + txt, false); return; }
+        let d = {}; try { d = JSON.parse(txt); } catch (e) {}
+        treasuryMsg(`${op === 'deposit' ? 'Deposit sent' : 'Shield submitted'} (ledger #${d.ledger_id || '?'}). Tracking will update status.`, true);
+        setTimeout(loadTreasury, 1500);
+      }).catch(e => treasuryMsg('Error: ' + e, false));
+    }
+
+    document.querySelector('[data-tab="treasury"]').addEventListener('click', () => { if (!treasuryLoaded) { treasuryLoaded = true; loadTreasury(); } });
+
     // Restore tab from hash
-    const validTabs = ['transactions', 'users', 'balances', 'apilogs', 'export'];
+    const validTabs = ['transactions', 'users', 'balances', 'treasury', 'apilogs', 'export'];
     const hashTab = location.hash.replace('#', '');
     if (validTabs.includes(hashTab)) {
       switchTab(hashTab);
       if (hashTab === 'apilogs' && !apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); }
+      if (hashTab === 'treasury' && !treasuryLoaded) { treasuryLoaded = true; loadTreasury(); }
     }
     window.addEventListener('hashchange', () => {
       const t = location.hash.replace('#', '');
       if (validTabs.includes(t)) {
         switchTab(t);
         if (t === 'apilogs' && !apilogsLoaded) { apilogsLoaded = true; loadAPILogs(); }
+        if (t === 'treasury' && !treasuryLoaded) { treasuryLoaded = true; loadTreasury(); }
       }
     });
 

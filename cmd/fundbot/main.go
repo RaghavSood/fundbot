@@ -140,7 +140,7 @@ func main() {
 	}
 
 	// Start HTTP server
-	srv := server.New(cfg, database, rpcClients)
+	srv := server.New(cfg, database, rpcClients, treas)
 	go func() {
 		if err := srv.Start(); err != nil {
 			log.Fatalf("HTTP server error: %v", err)

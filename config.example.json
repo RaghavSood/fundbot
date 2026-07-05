@@ -21,6 +21,10 @@
       "api_secret": "your-houdini-api-secret"
     }
   },
+  "treasury": {
+    "enabled": false,
+    "min_confidential_buffer_usd": 1
+  },
   "coingecko_api_key": "your-coingecko-api-key",
   "port": 8080,
   "dashboard_password": "",
