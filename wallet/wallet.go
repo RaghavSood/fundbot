@@ -13,6 +13,22 @@ import (
 // DeriveKey derives an ECDSA private key from a mnemonic at the given account index.
 // Path: m/44'/60'/0'/0/{index}
 func DeriveKey(mnemonic string, index uint32) (*ecdsa.PrivateKey, error) {
+	return deriveKeyAt(mnemonic, 0, index)
+}
+
+// TreasuryAccount is the BIP44 account number reserved for the service
+// treasury. User/chat wallets all live under account 0, so treasury keys can
+// never collide with address_assignments indexes.
+const TreasuryAccount = 1
+
+// DeriveTreasuryKey derives the service treasury key.
+// Path: m/44'/60'/1'/0/0
+func DeriveTreasuryKey(mnemonic string) (*ecdsa.PrivateKey, error) {
+	return deriveKeyAt(mnemonic, TreasuryAccount, 0)
+}
+
+// deriveKeyAt derives m/44'/60'/{accountNo}'/0/{index}.
+func deriveKeyAt(mnemonic string, accountNo, index uint32) (*ecdsa.PrivateKey, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	masterKey, err := bip32.NewMasterKey(seed)
@@ -32,19 +48,19 @@ func DeriveKey(mnemonic string, index uint32) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("deriving coin type: %w", err)
 	}
 
-	// m/44'/60'/0'
-	account, err := coinType.NewChildKey(bip32.FirstHardenedChild + 0)
+	// m/44'/60'/{accountNo}'
+	account, err := coinType.NewChildKey(bip32.FirstHardenedChild + accountNo)
 	if err != nil {
 		return nil, fmt.Errorf("deriving account: %w", err)
 	}
 
-	// m/44'/60'/0'/0
+	// m/44'/60'/{accountNo}'/0
 	change, err := account.NewChildKey(0)
 	if err != nil {
 		return nil, fmt.Errorf("deriving change: %w", err)
 	}
 
-	// m/44'/60'/0'/0/{index}
+	// m/44'/60'/{accountNo}'/0/{index}
 	child, err := change.NewChildKey(index)
 	if err != nil {
 		return nil, fmt.Errorf("deriving child %d: %w", index, err)
