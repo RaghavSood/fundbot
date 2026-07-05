@@ -41,25 +41,17 @@ func (s *Server) handleAdminTreasury(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
+	// Best-effort snapshot: an unfunded/unreachable NEAR account must not hide
+	// the EVM address and balances.
+	rep := s.treasury.Report(ctx)
+
 	type chainBalance struct {
 		Chain string `json:"chain"`
 		USDC  string `json:"usdc"`
 	}
-
-	var evm []chainBalance
-	evmBals, err := s.treasury.EVMBalances(ctx)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("evm balances: %v", err), http.StatusInternalServerError)
-		return
-	}
-	for _, b := range evmBals {
+	evm := []chainBalance{}
+	for _, b := range rep.EVM {
 		evm = append(evm, chainBalance{Chain: b.Chain, USDC: usdcFormat(b.Balance)})
-	}
-
-	public, confidential, err := s.treasury.IntentsBalances(ctx)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("intents balances: %v", err), http.StatusInternalServerError)
-		return
 	}
 
 	// Present intents balances per source chain by their token IDs.
@@ -68,7 +60,7 @@ func (s *Server) handleAdminTreasury(w http.ResponseWriter, r *http.Request) {
 		Public       string `json:"public"`
 		Confidential string `json:"confidential"`
 	}
-	var intents []intentsBalance
+	intents := []intentsBalance{}
 	for _, chain := range nearintents.SupportedSourceChains() {
 		tokenID, ok := nearintents.SourceTokenID(chain)
 		if !ok {
@@ -76,8 +68,8 @@ func (s *Server) handleAdminTreasury(w http.ResponseWriter, r *http.Request) {
 		}
 		intents = append(intents, intentsBalance{
 			Chain:        chain,
-			Public:       usdcFormatStr(public[tokenID]),
-			Confidential: usdcFormatStr(confidential[tokenID]),
+			Public:       usdcFormatStr(rep.Public[tokenID]),
+			Confidential: usdcFormatStr(rep.Confidential[tokenID]),
 		})
 	}
 
@@ -91,12 +83,15 @@ func (s *Server) handleAdminTreasury(w http.ResponseWriter, r *http.Request) {
 	total, _ := s.store.CountTreasuryLedger(ctx)
 
 	writeJSON(w, map[string]interface{}{
-		"enabled": true,
-		"account": s.treasury.Address().Hex(),
-		"evm":     evm,
-		"intents": intents,
-		"ledger":  ledger,
-		"total":   total,
+		"enabled":          true,
+		"account":          rep.Account,
+		"evm":              evm,
+		"evm_error":        rep.EVMErr,
+		"intents":          intents,
+		"public_error":     rep.PublicErr,
+		"confidential_error": rep.ConfidentialErr,
+		"ledger":           ledger,
+		"total":            total,
 	})
 }
 
@@ -130,6 +125,19 @@ func (s *Server) parseTreasuryOp(w http.ResponseWriter, r *http.Request) (string
 	}
 	amount := new(big.Int).SetInt64(int64(req.USD * 1e6))
 	return req.Chain, amount, true
+}
+
+func (s *Server) handleAdminTreasuryFundConfidential(w http.ResponseWriter, r *http.Request) {
+	chain, amount, ok := s.parseTreasuryOp(w, r)
+	if !ok {
+		return
+	}
+	id, txHash, err := s.treasury.DepositToConfidential(r.Context(), chain, amount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]interface{}{"ledger_id": id, "tx_hash": txHash})
 }
 
 func (s *Server) handleAdminTreasuryDeposit(w http.ResponseWriter, r *http.Request) {

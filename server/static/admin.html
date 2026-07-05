@@ -104,9 +104,13 @@
           <code id="treasury-account" class="text-sm text-blue-400 break-all"></code>
         </div>
 
+        <p class="text-xs text-gray-500">To bootstrap: send USDC to the treasury address above on Base/Avalanche, then use <span class="text-emerald-400">Fund confidential</span> to move it directly into the confidential balance the swap provider draws from.</p>
+        <div id="treasury-gate" class="hidden rounded-md border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300"></div>
+
         <div class="grid gap-6 md:grid-cols-2">
           <div>
             <h3 class="text-sm font-semibold text-gray-300 mb-2">On-chain USDC (EVM float)</h3>
+            <div id="treasury-evm-err" class="hidden mb-2 text-xs text-red-400"></div>
             <div class="rounded-lg border border-gray-800 bg-gray-900 overflow-hidden">
               <table class="w-full text-left text-xs">
                 <thead class="bg-gray-950/60 text-gray-500"><tr><th class="px-3 py-2">Chain</th><th class="px-3 py-2 text-right">USDC</th></tr></thead>
@@ -116,6 +120,7 @@
           </div>
           <div>
             <h3 class="text-sm font-semibold text-gray-300 mb-2">Intents balances</h3>
+            <div id="treasury-intents-err" class="hidden mb-2 text-xs text-red-400"></div>
             <div class="rounded-lg border border-gray-800 bg-gray-900 overflow-hidden">
               <table class="w-full text-left text-xs">
                 <thead class="bg-gray-950/60 text-gray-500"><tr><th class="px-3 py-2">Chain</th><th class="px-3 py-2 text-right">Public</th><th class="px-3 py-2 text-right">Confidential</th></tr></thead>
@@ -125,27 +130,42 @@
           </div>
         </div>
 
-        <div class="grid gap-6 md:grid-cols-2">
+        <div class="grid gap-6 md:grid-cols-3">
+          <div class="rounded-lg border border-emerald-800/60 bg-emerald-950/20 p-4">
+            <h3 class="text-sm font-semibold text-emerald-300 mb-1">Fund confidential</h3>
+            <p class="text-[11px] text-gray-500 mb-3">EVM &rarr; confidential (one step). Primary top-up.</p>
+            <div class="flex flex-wrap items-end gap-2">
+              <label class="text-xs text-gray-500">Chain
+                <select id="fund-confidential-chain" class="mt-1 block rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200"><option value="base">base</option><option value="avalanche">avalanche</option></select>
+              </label>
+              <label class="text-xs text-gray-500">USD
+                <input id="fund-confidential-usd" type="number" min="1" step="1" value="25" class="mt-1 block w-20 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
+              </label>
+              <button onclick="treasuryOp('fund-confidential')" class="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition">Fund</button>
+            </div>
+          </div>
           <div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <h3 class="text-sm font-semibold text-gray-300 mb-3">Fund intents (EVM &rarr; public balance)</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-1">Deposit to public</h3>
+            <p class="text-[11px] text-gray-500 mb-3">EVM &rarr; public (Main) balance. Advanced.</p>
             <div class="flex flex-wrap items-end gap-2">
               <label class="text-xs text-gray-500">Chain
                 <select id="deposit-chain" class="mt-1 block rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200"><option value="base">base</option><option value="avalanche">avalanche</option></select>
               </label>
               <label class="text-xs text-gray-500">USD
-                <input id="deposit-usd" type="number" min="1" step="1" value="25" class="mt-1 block w-24 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
+                <input id="deposit-usd" type="number" min="1" step="1" value="25" class="mt-1 block w-20 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
               </label>
-              <button onclick="treasuryOp('deposit')" class="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition">Deposit</button>
+              <button onclick="treasuryOp('deposit')" class="rounded-md bg-gray-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-gray-600 transition">Deposit</button>
             </div>
           </div>
           <div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <h3 class="text-sm font-semibold text-gray-300 mb-3">Shield (public &rarr; confidential)</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-1">Shield</h3>
+            <p class="text-[11px] text-gray-500 mb-3">Public &rarr; confidential. Advanced.</p>
             <div class="flex flex-wrap items-end gap-2">
               <label class="text-xs text-gray-500">Chain
                 <select id="shield-chain" class="mt-1 block rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200"><option value="base">base</option><option value="avalanche">avalanche</option></select>
               </label>
               <label class="text-xs text-gray-500">USD
-                <input id="shield-usd" type="number" min="1" step="1" value="20" class="mt-1 block w-24 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
+                <input id="shield-usd" type="number" min="1" step="1" value="20" class="mt-1 block w-20 rounded-md border border-gray-700 bg-gray-950 px-2 py-1.5 text-sm text-gray-200">
               </label>
               <button onclick="treasuryOp('shield')" class="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition">Shield</button>
             </div>
@@ -430,6 +450,21 @@
           panel.classList.remove('hidden');
           document.getElementById('treasury-account').textContent = d.account || '';
 
+          const evmErr = document.getElementById('treasury-evm-err');
+          if (d.evm_error) { evmErr.textContent = 'EVM balances unavailable: ' + d.evm_error; evmErr.classList.remove('hidden'); }
+          else { evmErr.classList.add('hidden'); }
+
+          const intentsErr = document.getElementById('treasury-intents-err');
+          const ierr = [d.public_error && ('public: ' + d.public_error), d.confidential_error && ('confidential: ' + d.confidential_error)].filter(Boolean).join(' | ');
+          if (ierr) { intentsErr.textContent = 'Intents balances unavailable — ' + ierr; intentsErr.classList.remove('hidden'); }
+          else { intentsErr.classList.add('hidden'); }
+
+          const gate = document.getElementById('treasury-gate');
+          if (d.confidential_error && /not enabled|invite/i.test(d.confidential_error)) {
+            gate.textContent = 'Confidential Intents is not yet enabled for this API key (invite-only). Confidential funding and swaps will fail until NEAR/Defuse enables it. The public intents rail and EVM balances work now.';
+            gate.classList.remove('hidden');
+          } else { gate.classList.add('hidden'); }
+
           const evm = document.getElementById('treasury-evm-body');
           evm.innerHTML = (d.evm || []).map(b => `<tr><td class="px-3 py-2">${b.chain}</td><td class="px-3 py-2 text-right font-mono">${b.usdc}</td></tr>`).join('')
             || '<tr><td colspan="2" class="px-3 py-3 text-center text-gray-500">No balances.</td></tr>';
@@ -466,11 +501,13 @@
       el.classList.remove('hidden');
     }
 
+    const treasuryOpLabels = { 'fund-confidential': 'Fund confidential', 'deposit': 'Deposit to public', 'shield': 'Shield' };
     function treasuryOp(op) {
+      const label = treasuryOpLabels[op] || op;
       const chain = document.getElementById(op + '-chain').value;
       const usd = parseFloat(document.getElementById(op + '-usd').value);
       if (!(usd > 0)) { treasuryMsg('Enter a positive USD amount.', false); return; }
-      if (!confirm(`${op === 'deposit' ? 'Deposit' : 'Shield'} $${usd} on ${chain}?`)) return;
+      if (!confirm(`${label}: $${usd} on ${chain}?`)) return;
       treasuryMsg('Submitting…', true);
       fetch('/api/admin/treasury/' + op, {
         method: 'POST',
@@ -478,11 +515,12 @@
         body: JSON.stringify({ chain, usd })
       }).then(async r => {
         const txt = await r.text();
-        if (!r.ok) { treasuryMsg('Error: ' + txt, false); return; }
+        if (!r.ok) { treasuryMsg(`${label} error: ` + txt, false); return; }
         let d = {}; try { d = JSON.parse(txt); } catch (e) {}
-        treasuryMsg(`${op === 'deposit' ? 'Deposit sent' : 'Shield submitted'} (ledger #${d.ledger_id || '?'}). Tracking will update status.`, true);
+        const ref = d.tx_hash ? ('tx ' + d.tx_hash) : (d.deposit_address ? ('deposit ' + d.deposit_address) : '');
+        treasuryMsg(`${label} submitted (ledger #${d.ledger_id || '?'}) ${ref}. Tracking will update status.`, true);
         setTimeout(loadTreasury, 1500);
-      }).catch(e => treasuryMsg('Error: ' + e, false));
+      }).catch(e => treasuryMsg(`${label} error: ` + e, false));
     }
 
     document.querySelector('[data-tab="treasury"]').addEventListener('click', () => { if (!treasuryLoaded) { treasuryLoaded = true; loadTreasury(); } });

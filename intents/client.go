@@ -120,6 +120,13 @@ type authResponse struct {
 
 // sessionToken returns a valid user-session JWT, authenticating or
 // refreshing as needed. Caller must not hold c.mu.
+//
+// NOTE: session auth is only required for the confidential-balance and history
+// endpoints (/v0/account/*). The versioned timestamped nonce clears the
+// endpoint's timestamp validation, but signature verification is not yet
+// accepted by the server despite a byte-canonical ERC-191 payload; this path is
+// gated behind Confidential Intents being enabled for the API key, so it is
+// left best-effort. Callers surface the error rather than failing hard.
 func (c *Client) sessionToken(ctx context.Context) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

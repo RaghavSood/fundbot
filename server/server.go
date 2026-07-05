@@ -88,6 +88,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/api-logs", s.withAdminAuth(s.handleAdminAPILogs))
 	mux.HandleFunc("/api/admin/api-log/", s.withAdminAuth(s.handleAdminAPILogDetail))
 	mux.HandleFunc("/api/admin/treasury", s.withAdminAuth(s.handleAdminTreasury))
+	mux.HandleFunc("/api/admin/treasury/fund-confidential", s.withAdminAuth(s.handleAdminTreasuryFundConfidential))
 	mux.HandleFunc("/api/admin/treasury/deposit", s.withAdminAuth(s.handleAdminTreasuryDeposit))
 	mux.HandleFunc("/api/admin/treasury/shield", s.withAdminAuth(s.handleAdminTreasuryShield))
 	mux.HandleFunc("/api/explorers", s.withDashAuth(s.handleExplorers))

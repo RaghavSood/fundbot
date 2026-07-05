@@ -90,31 +90,52 @@ func (t *Treasury) EVMBalances(ctx context.Context) ([]ChainBalance, error) {
 	return out, nil
 }
 
-// IntentsBalances returns public (Main) and confidential balances of the
-// per-chain USDC representations held by the service intents account, keyed
-// by 1-Click token ID. Amounts are base-unit strings.
-func (t *Treasury) IntentsBalances(ctx context.Context) (public map[string]string, confidential map[string]string, err error) {
+// BalanceReport is a best-effort snapshot of every treasury balance source.
+// Each section carries its own error string so a failure in one (e.g. an
+// unfunded NEAR account) never hides the others.
+type BalanceReport struct {
+	Account         string            `json:"account"`
+	EVM             []ChainBalance    `json:"-"`
+	EVMErr          string            `json:"evm_error,omitempty"`
+	Public          map[string]string `json:"-"` // tokenID -> base units
+	PublicErr       string            `json:"public_error,omitempty"`
+	Confidential    map[string]string `json:"-"` // tokenID -> base units
+	ConfidentialErr string            `json:"confidential_error,omitempty"`
+}
+
+// Report gathers all balance sources best-effort. It never returns an error;
+// per-section failures are captured in the report's *Err fields.
+func (t *Treasury) Report(ctx context.Context) BalanceReport {
+	rep := BalanceReport{
+		Account:      t.address.Hex(),
+		Public:       map[string]string{},
+		Confidential: map[string]string{},
+	}
+
+	if evm, err := t.EVMBalances(ctx); err != nil {
+		rep.EVMErr = err.Error()
+	} else {
+		rep.EVM = evm
+	}
+
 	tokenIDs := usdcTokenIDs()
-
-	pub, err := t.client.PublicBalances(ctx, tokenIDs)
-	if err != nil {
-		return nil, nil, fmt.Errorf("public intents balances: %w", err)
-	}
-	public = make(map[string]string, len(tokenIDs))
-	for i, id := range tokenIDs {
-		public[id] = pub[i]
+	if pub, err := t.client.PublicBalances(ctx, tokenIDs); err != nil {
+		rep.PublicErr = err.Error()
+	} else {
+		for i, id := range tokenIDs {
+			rep.Public[id] = pub[i]
+		}
 	}
 
-	conf, err := t.client.ConfidentialBalances(ctx, tokenIDs...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("confidential intents balances: %w", err)
-	}
-	confidential = make(map[string]string, len(conf))
-	for _, b := range conf {
-		confidential[b.TokenID] = b.Available
+	if conf, err := t.client.ConfidentialBalances(ctx, tokenIDs...); err != nil {
+		rep.ConfidentialErr = err.Error()
+	} else {
+		for _, b := range conf {
+			rep.Confidential[b.TokenID] = b.Available
+		}
 	}
 
-	return public, confidential, nil
+	return rep
 }
 
 // ConfidentialUSDC returns the confidential balance (base units) of the USDC
@@ -140,9 +161,27 @@ func (t *Treasury) ConfidentialUSDC(ctx context.Context, chain string) (*big.Int
 	return big.NewInt(0), nil
 }
 
+// DepositToConfidential moves USDC from the treasury EVM wallet directly into
+// the service's confidential intents balance in one step, using NEAR's
+// direct-to-confidential deposit (ORIGIN_CHAIN deposit -> CONFIDENTIAL_INTENTS
+// recipient). This is the primary bootstrap/top-up primitive: it avoids the
+// two-step deposit-to-public-then-shield dance. Returns the ledger entry ID
+// and the on-chain tx hash.
+func (t *Treasury) DepositToConfidential(ctx context.Context, chain string, amount *big.Int) (int64, string, error) {
+	return t.depositFromEVM(ctx, chain, amount, intents.TypeConfidentialIntents, "confidential_deposit", "treasury EVM -> confidential balance")
+}
+
 // DepositToIntents moves USDC from the treasury EVM wallet into the service's
-// public intents balance. Returns the ledger entry ID and the on-chain tx hash.
+// public (Main) intents balance. Returns the ledger entry ID and the on-chain
+// tx hash. Prefer DepositToConfidential for funding the confidential rail.
 func (t *Treasury) DepositToIntents(ctx context.Context, chain string, amount *big.Int) (int64, string, error) {
+	return t.depositFromEVM(ctx, chain, amount, intents.TypeIntents, "intents_deposit", "treasury EVM -> intents public balance")
+}
+
+// depositFromEVM quotes an ORIGIN_CHAIN deposit that lands in the given
+// intents recipient type, sends the treasury USDC to the returned EVM deposit
+// address, and records the ledger entry.
+func (t *Treasury) depositFromEVM(ctx context.Context, chain string, amount *big.Int, recipientType, kind, note string) (int64, string, error) {
 	tokenID, ok := nearintents.SourceTokenID(chain)
 	if !ok {
 		return 0, "", fmt.Errorf("unknown source chain %q", chain)
@@ -159,7 +198,7 @@ func (t *Treasury) DepositToIntents(ctx context.Context, chain string, amount *b
 		Amount:           amount.String(),
 		DepositType:      intents.TypeOriginChain,
 		Recipient:        t.client.SignerID(),
-		RecipientType:    intents.TypeIntents,
+		RecipientType:    recipientType,
 		RefundTo:         strings.ToLower(t.address.Hex()),
 		RefundType:       intents.TypeOriginChain,
 	})
@@ -179,7 +218,7 @@ func (t *Treasury) DepositToIntents(ctx context.Context, chain string, amount *b
 		return 0, "", err
 	}
 
-	tx, err := swaps.SignAndBroadcast(ctx, rpc, chainIDs[chain], t.key, thorchain.USDCContracts[chain], big.NewInt(0), 100000, data, "treasury intents deposit")
+	tx, err := swaps.SignAndBroadcast(ctx, rpc, chainIDs[chain], t.key, thorchain.USDCContracts[chain], big.NewInt(0), 100000, data, "treasury "+kind)
 	if err != nil {
 		return 0, "", fmt.Errorf("sending deposit: %w", err)
 	}
@@ -191,14 +230,14 @@ func (t *Treasury) DepositToIntents(ctx context.Context, chain string, amount *b
 
 	id, err := t.store.InsertTreasuryLedger(ctx, db.InsertTreasuryLedgerParams{
 		Direction:      "out",
-		Kind:           "intents_deposit",
+		Kind:           kind,
 		Chain:          chain,
 		AmountUsdc:     amount.Int64(),
 		TxHash:         txHash,
 		DepositAddress: q.DepositAddress,
 		TopupID:        sql.NullInt64{},
 		Status:         "pending",
-		Note:           "treasury EVM -> intents public balance",
+		Note:           note,
 	})
 	if err != nil {
 		log.Printf("treasury: ledger insert failed (deposit sent %s): %v", txHash, err)
