@@ -6,8 +6,8 @@
   "whitelisted_users": [123456789],
   "database_path": "fundbot.db",
   "rpc_endpoints": {
-    "avalanche": "https://api.avax.network/ext/bc/C/rpc",
-    "base": "https://mainnet.base.org"
+    "avalanche": ["https://api.avax.network/ext/bc/C/rpc", "https://avalanche-c-chain-rpc.publicnode.com"],
+    "base": ["https://mainnet.base.org", "https://base-rpc.publicnode.com"]
   },
   "providers": {
     "simpleswap": {

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -98,8 +100,48 @@ func SignAndBroadcast(
 		head.BaseFee.String(), tip.String(), feeCap.String(), hexutil.Encode(raw))
 
 	if err := rpc.SendTransaction(ctx, signedTx); err != nil {
+		// A send error after the tx left this process is indeterminate: flaky
+		// gateways (e.g. Cloudflare 524) can time out the response after the
+		// origin has already accepted the tx. Treating that as failure loses
+		// track of real on-chain transfers, so check before reporting failure.
+		if isAlreadyKnown(err) {
+			log.Printf("%s: send returned %q — tx already in mempool, treating as broadcast", label, err)
+			return signedTx, nil
+		}
+		if txReachedNetwork(ctx, rpc, signedTx.Hash(), label) {
+			return signedTx, nil
+		}
 		return nil, fmt.Errorf("sending tx: %w", err)
 	}
 
 	return signedTx, nil
+}
+
+// isAlreadyKnown reports whether a send error means the node already has this
+// exact transaction (a duplicate submit, e.g. after a failover retry).
+func isAlreadyKnown(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already known") ||
+		strings.Contains(msg, "known transaction") ||
+		strings.Contains(msg, "transaction already exists")
+}
+
+// txReachedNetwork polls for the transaction by hash after a failed send,
+// returning true if the network has it despite the send error.
+func txReachedNetwork(ctx context.Context, rpc *ethclient.Client, hash common.Hash, label string) bool {
+	deadline := time.Now().Add(45 * time.Second)
+	for {
+		if _, _, err := rpc.TransactionByHash(ctx, hash); err == nil {
+			log.Printf("%s: send errored but tx %s is on the network — treating as broadcast", label, hash.Hex())
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(5 * time.Second):
+		}
+	}
 }

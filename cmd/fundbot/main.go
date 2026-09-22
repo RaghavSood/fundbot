@@ -20,6 +20,7 @@ import (
 	"github.com/RaghavSood/fundbot/nearconf"
 	"github.com/RaghavSood/fundbot/nearintents"
 	"github.com/RaghavSood/fundbot/resolver"
+	"github.com/RaghavSood/fundbot/rpcpool"
 	"github.com/RaghavSood/fundbot/server"
 	"github.com/RaghavSood/fundbot/simpleswap"
 	"github.com/RaghavSood/fundbot/swaps"
@@ -45,15 +46,15 @@ func main() {
 	}
 	defer database.Close()
 
-	// Connect RPC clients
+	// Connect RPC clients (with per-request failover across listed endpoints)
 	rpcClients := make(map[string]*ethclient.Client)
-	for name, url := range cfg.RPCEndpoints {
-		client, err := ethclient.Dial(url)
+	for name, urls := range cfg.RPCEndpoints {
+		client, err := rpcpool.Dial(context.Background(), name, urls)
 		if err != nil {
-			log.Fatalf("Failed to connect to %s RPC at %s: %v", name, url, err)
+			log.Fatalf("Failed to connect to %s RPC at %v: %v", name, urls, err)
 		}
 		rpcClients[name] = client
-		log.Printf("Connected to %s RPC", name)
+		log.Printf("Connected to %s RPC (%d endpoint(s))", name, len(urls))
 	}
 
 	// Initialize providers

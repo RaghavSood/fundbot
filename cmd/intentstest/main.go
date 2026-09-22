@@ -26,11 +26,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/RaghavSood/fundbot/config"
 	"github.com/RaghavSood/fundbot/intents"
 	"github.com/RaghavSood/fundbot/nearintents"
+	"github.com/RaghavSood/fundbot/rpcpool"
 	"github.com/RaghavSood/fundbot/swaps"
 	"github.com/RaghavSood/fundbot/thorchain"
 	"github.com/RaghavSood/fundbot/wallet"
@@ -200,11 +200,7 @@ func runDeposit(ctx context.Context, cfg *config.Config, client *intents.Client,
 	}
 	fmt.Printf("Deposit address on %s: %s (amountOut=%s)\n", chain, q.DepositAddress, q.AmountOutFmt)
 
-	rpcURL := cfg.RPCEndpoints[chain]
-	if rpcURL == "" {
-		log.Fatalf("no RPC endpoint configured for %s", chain)
-	}
-	rpc, err := ethclient.Dial(rpcURL)
+	rpc, err := rpcpool.Dial(ctx, chain, cfg.RPCEndpoints[chain])
 	if err != nil {
 		log.Fatalf("dialing RPC: %v", err)
 	}

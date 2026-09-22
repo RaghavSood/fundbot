@@ -6,6 +6,24 @@ import (
 	"os"
 )
 
+// EndpointList is a list of RPC URLs for one chain. It unmarshals from either
+// a plain string (legacy configs) or a JSON array of strings.
+type EndpointList []string
+
+func (e *EndpointList) UnmarshalJSON(data []byte) error {
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*e = EndpointList{single}
+		return nil
+	}
+	var list []string
+	if err := json.Unmarshal(data, &list); err != nil {
+		return fmt.Errorf("rpc endpoint must be a string or array of strings: %w", err)
+	}
+	*e = list
+	return nil
+}
+
 type ProviderConfig struct {
 	APIKey    string `json:"api_key"`
 	APISecret string `json:"api_secret"`
@@ -49,8 +67,10 @@ type Config struct {
 	// Path to SQLite database (multi mode only)
 	DatabasePath string `json:"database_path"`
 
-	// RPC endpoints for supported chains
-	RPCEndpoints map[string]string `json:"rpc_endpoints"`
+	// RPC endpoints for supported chains. Each value is either a single URL
+	// string or an array of URLs; with multiple http(s) URLs the client fails
+	// over between them per request.
+	RPCEndpoints map[string]EndpointList `json:"rpc_endpoints"`
 
 	// Explorer base URLs per chain (e.g. {"base": "https://basescan.org"})
 	// Defaults provided for known chains if not set.
