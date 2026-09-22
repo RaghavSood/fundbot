@@ -90,6 +90,12 @@ Config is JSON (`config.json`). See `config.example.json` for structure.
 - **USDC permit domain**: `{name: "USD Coin", version: "2", chainId, verifyingContract: USDC address}` — both Avalanche and Base use the same name/version
 - **Permit value**: Use max `uint256` so the permit doesn't need to be repeated for subsequent swaps
 
+### RPC Resilience (`rpcpool/`)
+- `rpcpool.Dial()` builds the shared `*ethclient.Client`s: with multiple http(s) URLs per chain it fails over per-request (20s per-attempt timeout, sticky last-good endpoint); a single `ws(s)://` URL is dialed directly (no failover)
+- Config `rpc_endpoints` values: string (legacy) or array of URLs (`config.EndpointList`)
+- `swaps.SignAndBroadcast` treats send errors as indeterminate: "already known" responses count as broadcast, and other send errors poll `TransactionByHash` for 45s before reporting failure (a gateway timeout can occur after the node accepted the tx — this previously orphaned real transfers)
+- `cmd/manualsend`: ops tool to manually fund a provider deposit address from a derived wallet (used when an exchange was created but the automated transfer failed); refuses to send unless the derived address matches `-expect`
+
 ### Balance Checking
 - `balances/` package provides `USDCBalance()` and `FetchBalances()` helpers
 - `balances` package does NOT import `thorchain` (avoids import cycle) — USDC contract addresses are passed as parameters
